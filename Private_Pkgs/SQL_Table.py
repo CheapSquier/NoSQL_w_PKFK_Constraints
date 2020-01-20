@@ -3,15 +3,13 @@
 import sys
 import json
 from sortedcontainers import SortedList
-import aerospike
-from aerospike_helpers.operations import list_operations as listOps
+import mysql.connector
 
 class Table:
-    'Class that implements PK and FK constraints with Aerospike'
+    'Class that implements the same API framework as AS_Table.py, but for use with a MySQL DB'
 
     #Class variables   
     _registry = []
-    _NameSpace = "test_DB_SEF"
     _VerifyConstraints = True
     _UseFKTables = True
     _CurrentClient = None
