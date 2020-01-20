@@ -1,0 +1,16 @@
+#!/bin/bash
+
+./BenchMarkSch1.py 10
+./BenchMarkSch1.py 100
+./BenchMarkSch1.py 1000
+./BenchMarkSch1.py 10000
+
+./BenchMarkSch2.py 10
+./BenchMarkSch2.py 100
+./BenchMarkSch2.py 1000
+./BenchMarkSch2.py 10000
+
+./BenchMarkSch2b.py 10 10
+./BenchMarkSch2b.py 100 10
+./BenchMarkSch2b.py 1000 100
+./BenchMarkSch2b.py 10000 100
