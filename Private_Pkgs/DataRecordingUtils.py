@@ -2,7 +2,7 @@ import sys
 import datetime
 
 class drutils:
-    'Class with utils for to make recording data easier'
+    'Class with utils to make recording data easier'
 
     #Class variables
     _outputModeList = ["f","s","b"] # file, screen both

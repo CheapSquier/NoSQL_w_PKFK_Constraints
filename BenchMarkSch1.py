@@ -5,7 +5,9 @@
 
 
 RunningDB = True
-import aerospike
+#import aerospike
+import mysql.connector
+from mysql.connector import errorcode
 import sys
 import json
 import time
@@ -17,23 +19,30 @@ print("Current Python version: ", sys.version_info[0],".",sys.version_info[1],".
 
 _useAllTimes = False
 _print_raw = False
+_DB_mode = sys.argv[1]
+if _DB_mode != "AS" and _DB_mode != "SQL":
+    print("ERROR: MUST SPECIFY AS OR SQL MODE AS 1ST PARAMETER")
+    exit()
 # In[2]:
 
-
 #Import the Table class used to build Table schema
-from Private_Pkgs.Table import Table
+#from Private_Pkgs.AS_Table import Table
+from Private_Pkgs.SQL_Table import Table
 from Private_Pkgs.DataRecordingUtils import drutils
 
 def BuildTables():
-    TableA = Table("test_DB_SEF", "TableA")
+    TableA = Table("test_DB_SQL", "TableA")
     TableA.AddCol("PKcol_TabA")
     for colNum in range(1,63+1):
         TableA.AddCol("col"+str(colNum))
     TableA.AddPK("PKcol_TabA")
-    if TableA.VerifyFKrefsCompletePK():
-        print(TableA.TableName, "has complete FK to PK references (or none exist in table)")
+    if TableA.VerifyFKrefsCompletePK(): # In SQL mode, this will create the table
+        if _DB_mode == "AS":
+            print(TableA.TableName, "has complete FK to PK references (or none exist in table)")
+        else:
+            print(TableA.TableName, "has been created in the SQL database")
 
-    TableB = Table("test_DB_SEF", "TableB")
+    TableB = Table("test_DB_SQL", "TableB")
     TableB.AddCol("PKcol_TabB")
     TableB.AddCol("FK_BtoA")
     for colNum in range(2,63+1):
@@ -41,7 +50,10 @@ def BuildTables():
     TableB.AddPK("PKcol_TabB")
     TableB.AddFK("FK_BtoA", "TableA", "PKcol_TabA")
     if TableB.VerifyFKrefsCompletePK():
-        print(TableB.TableName, "has complete FK to PK references (or none exist in table)")
+        if _DB_mode == "AS":
+            print(TableB.TableName, "has complete FK to PK references (or none exist in table)")
+        else:
+            print(TableB.TableName, "has been created in the SQL database")
 
 def InsertData():
     insertA_times = []
@@ -54,7 +66,7 @@ def InsertData():
     for rowNum in range(0,int(NumberRows)):
         thisRow =[]
         thisRow.append(rowNum) #The PK
-        for colNum in range(1,63+1):
+        for _ in range(1,63+1): # create data for 63 columns
             thisRow.append("datadata") # constant length
         t0 = time.time()
         TableA.Insert(thisRow)
@@ -66,7 +78,7 @@ def InsertData():
         thisRow.append(rowNum) #The PK
         #thisRow.append(int(NumberRows) - 1 - rowNum) #The FK # use this for a descending sequence
         thisRow.append(rowNum) #The FK (yes, same value as the PK) #ascending sequence
-        for colNum in range(2,63+1):
+        for _ in range(2,63+1): #create data for 62 columns
             thisRow.append("datadata") # constant length
         t0 = time.time()
         TableB.Insert(thisRow)
@@ -84,7 +96,7 @@ def UpdateData():
     TableB = Table._registry[1]
     print(TableA.TableName)
     print(TableB.TableName)
-    #Setup a random, no repeating sequence
+    #Setup a random, non repeating sequence
     random.seed(42)
     row_seq = list(range(0, NumberRows))
     random.shuffle(row_seq)
@@ -92,7 +104,7 @@ def UpdateData():
     for idx in range(0, int(NumberRows)):
         thisRow =[]
         thisRow.append(row_seq[idx]) #The PK
-        for colNum in range(1,63+1):
+        for _ in range(1,63+1): # create data for 63 columns
             thisRow.append("dataXXXX") # constant length
         t0 = time.time()
         TableA.Update(thisRow)
@@ -103,10 +115,11 @@ def UpdateData():
     for idx in range(0, int(NumberRows)):
         thisRow =[]
         thisRow.append(row_seq[idx]) #The PK
-        thisRow.append(row_seq[int(NumberRows) - 1 - idx]) #The FK #descending
+        #thisRow.append(row_seq[int(NumberRows) - 1 - idx]) #The FK #descending
+        thisRow.append(row_seq[idx]) #The FK (ascending.. mixing ascending and descending FK in insert and update can trigger FK constraints)
         #thisRow.append(row_seq[idx]) #The FK #ascending
-        for colNum in range(2,63+1):
-            thisRow.append("datadata") # constant length
+        for _ in range(2,63+1): # create data for 62 columns
+            thisRow.append("dataXXXX") # constant length
         t0 = time.time()
         TableB.Update(thisRow)
         #print("TableB update: ", thisRow)
@@ -161,14 +174,14 @@ def report_times(insertAll_times, silent = False):
                          statistics.median(insert_times),
                          statistics.mean(insert_times),
                          statistics.stdev(insert_times))
-        print("Statistics for: ", dataKey)
+        benchdata.rcrd_data("Statistics for: "+dataKey)
         benchdata.rcrd_data("\tMEDIAN"+str(statistics.median(insert_times))+" ms")
         benchdata.rcrd_data("\tMEAN  "+str(statistics.mean(insert_times))+" ms")
         benchdata.rcrd_data("\tSTDEV "+str(statistics.stdev(insert_times))+" ms")
     return BenchTimes
 
 def report_statistics(withConBenchTimeAll, noConBenchTimeAll):
-    for withConKey, noConKey in zip(withConBenchTimeAll, noConBenchTimeAll):
+    for withConKey, noConKey in zip(withConBenchTimeAll, noConBenchTimeAll): # FIXME This function needes to handle noCon times that are empty (for SQL)
         print("Statistics for: ", withConKey)
         withConBenchTime = withConBenchTimeAll[withConKey]
         noConBenchTime = noConBenchTimeAll[noConKey]
@@ -187,24 +200,33 @@ Table.SetDebugMode(False)
 Table.GetDebugMode()
 
 # ***Open communication with the database***
-# Specify the IP addresses and ports for the Aerospike cluster
-config = {
-  'hosts': [ ('18.221.189.247', 3000), ('18.224.137.105', 3000) ]
-}
-# Create a client and connect it to the cluster
-print("RunningDB is", RunningDB)
-if RunningDB:
+if sys.argv[1] == "AS":
+    # Specify the IP addresses and ports for the Aerospike cluster
+    config = {
+    'hosts': [ ('18.221.189.247', 3000), ('18.224.137.105', 3000) ]
+    }
+    # Create a client and connect it to the cluster
+    print("RunningDB is", RunningDB)
     try:
-      client = aerospike.client(config).connect()
+        client = aerospike.client(config).connect()
+        #Be sure to tell the Table class the name of the client it's talking to
+        Table.SetTableClient(client)
     except:
-      print("failed to connect to the cluster with", config['hosts'])
-      sys.exit(1)
-else:
-    client = FakeAerospike(config) #.connect()
-    print("WARNING: Running offline simulated version of databawe")
+        print("failed to connect to the cluster with", config['hosts'])
+        sys.exit(1)
+if sys.argv[1] == "SQL":
+    client = mysql.connector.connect(
+    host="127.0.0.1",
+    user="root",
+    database="test_db_sql"
+    #host="18.191.176.248",
+    #user="demouser",
+    #passwd="DrBajaj2*",
+    )
+    sqlCursor = client.cursor(buffered=True)
+    Table.SetTableClient(client, sqlCursor)
 
-#Be sure to tell the Table class the name of the client it's talking to
-Table.SetTableClient(client)
+
 
 # ==============================================
 #    Start of Main Program Loop
@@ -213,7 +235,7 @@ Table.SetTableClient(client)
 if len(sys.argv) == 0:
     NumberRows = input("How many records to BenchMark?")
 else:
-    NumberRows = sys.argv[1]
+    NumberRows = sys.argv[2]
 
 NumberRows = int(NumberRows)
 if NumberRows >= 1000:
@@ -240,46 +262,50 @@ insertEndTime = time.time()
 
 # ### Calculate Time Statistics (Checking constraints during Insert)
 withConstraintTimesAll = report_times(insertAll_times)
+noConstraintTimesAll = []
+if sys.argv[1] == "AS":
+    # ### Remove Benchmark Tables
+    Table.RemoveAllTables(client, True) #True to wait for confirmation
 
-# ### Remove Benchmark Tables
-Table.RemoveAllTables(client, True) #True to wait for confirmation
+    # ### Rebuild Tables and re-insert data, after disabling Constraints
 
-# ### Rebuild Tables and re-insert data, after disabling Constraints
+    Table.SetVerifyConstraints(False)
+    Table.UseFKTables(False)
 
-Table.SetVerifyConstraints(False)
-Table.UseFKTables(False)
-
-BuildTables()
-insertAll_times = InsertData()
-noConstraintTimesAll = report_times(insertAll_times)
+    BuildTables()
+    insertAll_times = InsertData()
+    noConstraintTimesAll = report_times(insertAll_times)
 
 # ### Calculate Time Statistics (No constraint verification during Insert)    Close the data object
 benchdata.rcrd_data("Total Insert Time: {} seconds, 2 tables".format(insertEndTime - insertStartTime))
-report_statistics(withConstraintTimesAll, noConstraintTimesAll)
+report_statistics(withConstraintTimesAll, noConstraintTimesAll) # report_statistics will handle empty noConstraint lists
 benchdata.close()
 del benchdata
+
 
 #      ==============================================
 #         Update Section
 #      ==============================================
 benchdata =drutils("Schema1_Update_expt_"+NumberRowsStr+"_","b")
 
-### We already have tables that do NOT use constraints or FK Tables ###
-#Therefore, the first run of Update and Delete will be with ***No*** constraints
-updateStartTime = time.time() #updateStartTime/EndTime only use to give an overall time for the update loop
-updateAll_times = UpdateData()
-updateEndTime = time.time()
+noConstraintTimesAll = []
+if sys.argv[1] == "AS":
+    ### We already have tables that do NOT use constraints or FK Tables ###
+    #Therefore, the first run of Update and Delete will be with ***No*** constraints
+    updateStartTime = time.time() #updateStartTime/EndTime only use to give an overall time for the update loop
+    updateAll_times = UpdateData()
+    updateEndTime = time.time()
 
-noConstraintTimesAll = report_times(updateAll_times)
+    noConstraintTimesAll = report_times(updateAll_times)
 
-#***Remove and then Rebuild the Tables with constraints***
-Table.RemoveAllTables(client, True) #True to wait for confirmation
+    #***Remove and then Rebuild the Tables with constraints***
+    Table.RemoveAllTables(client, True) #True to wait for confirmation
 
-Table.SetVerifyConstraints(True)
-Table.UseFKTables(True)
+    Table.SetVerifyConstraints(True)
+    Table.UseFKTables(True)
 
-BuildTables()
-InsertData()
+    BuildTables()
+    InsertData()
 
 updateStartTime = time.time() #updateStartTime/EndTime only use to give an overall time for the update loop
 updateAll_times = UpdateData()
@@ -293,19 +319,21 @@ report_statistics(withConstraintTimesAll, noConstraintTimesAll)
 benchdata.close()
 del benchdata
 
-#Remove all tables and rebuild them for the delete.
-Table.RemoveAllTables(client, True) #True to wait for confirmation
+if sys.argv[1] == "AS":
+    #Remove all tables and rebuild them for the delete.
+    Table.RemoveAllTables(client, True) #True to wait for confirmation
 
 #      ==============================================
 #         Delete Section
 #      ==============================================
 benchdata =drutils("Schema1_Delete_expt_"+NumberRowsStr+"_","b")
 
-Table.SetVerifyConstraints(True)
-Table.UseFKTables(True)
+if sys.argv[1] == "AS":
+    Table.SetVerifyConstraints(True)
+    Table.UseFKTables(True)
 
-BuildTables()
-InsertData()
+    BuildTables()
+    InsertData()
 
 deleteStartTime = time.time() #deleteStartTime/EndTime only use to give an overall time for the delete loop
 deleteAll_times = DeleteData()
@@ -315,17 +343,18 @@ withConstraintTimesAll = report_times(deleteAll_times)
 
 Table.RemoveAllTables(client, True) #True to wait for confirmation
 
-Table.SetVerifyConstraints(False)
-Table.UseFKTables(False)
+if sys.argv[1] == "AS":
+    Table.SetVerifyConstraints(False)
+    Table.UseFKTables(False)
 
-BuildTables()
-InsertData()
+    BuildTables()
+    InsertData()
 
-deleteStartTime = time.time() #deleteStartTime/EndTime only use to give an overall time for the delete loop
-deleteAll_times = DeleteData()
-deleteEndTime = time.time()
+    deleteStartTime = time.time() #deleteStartTime/EndTime only use to give an overall time for the delete loop
+    deleteAll_times = DeleteData()
+    deleteEndTime = time.time()
 
-noConstraintTimesAll = report_times(deleteAll_times)
+    noConstraintTimesAll = report_times(deleteAll_times)
 
 benchdata.rcrd_data("Total Delete Time: {} seconds, 2 tables".format(deleteEndTime - deleteStartTime))
 report_statistics(withConstraintTimesAll, noConstraintTimesAll)
