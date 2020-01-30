@@ -2,15 +2,16 @@ import sys
 import datetime
 
 class drutils:
-    'Class with utils for to make recording data easier'
+    'Class with utils to make recording data easier'
 
     #Class variables
     _outputModeList = ["f","s","b"] # file, screen both
+    _dataFolderRelativePath = "..\\..\\local_data\\"
 
     #Class methods
     @staticmethod
     def createTS_filename(prefix):
-        filename = prefix+"{:%Y-%m-%d_%H%M%S}".format(datetime.datetime.now())+".txt"
+        filename = drutils._dataFolderRelativePath + prefix + "{:%Y-%m-%d_%H%M%S}".format(datetime.datetime.now()) + ".txt"
         return filename
 
     #constructor

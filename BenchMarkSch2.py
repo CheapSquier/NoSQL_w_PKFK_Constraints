@@ -48,6 +48,7 @@ def BuildTables():
     for colNum in range(2,63+1):
         TableB.AddCol("col"+str(colNum))
     TableB.AddPK("PKcol_TabB")
+    TableB.AddPK("FK_BtoA")  # *** This is the only difference between Schema 1 and Schema 2
     TableB.AddFK("FK_BtoA", "TableA", "PKcol_TabA")
     if TableB.VerifyFKrefsCompletePK():
         if _DB_mode == "AS":
@@ -117,7 +118,6 @@ def UpdateData():
         thisRow.append(row_seq[idx]) #The PK
         #thisRow.append(row_seq[int(NumberRows) - 1 - idx]) #The FK #descending
         thisRow.append(row_seq[idx]) #The FK (ascending.. mixing ascending and descending FK in insert and update can trigger FK constraints)
-        #thisRow.append(row_seq[idx]) #The FK #ascending
         for _ in range(2,63+1): # create data for 62 columns
             thisRow.append("dataXXXX") # constant length
         t0 = time.time()
@@ -147,6 +147,7 @@ def DeleteData():
         B_Row = []
         A_Row.append(row_seq[idx]) #The PK
         B_Row.append(row_seq[idx]) #The PK for Table B
+        B_Row.append(row_seq[idx]) #The 2nd PKcol for Table B # *** Difference in execution for Schema1 and Schema2
         t0 = time.time()
         TableB.Delete(B_Row)
         t1 = time.time()
@@ -247,7 +248,7 @@ else:
 #         Insert Section
 #      ==============================================
 #Initialize data reporting
-benchdata =drutils("Schema1_Insert_expt_"+NumberRowsStr+"_","b")
+benchdata =drutils("Schema2_Insert_expt_"+NumberRowsStr+"_","b")
 
 Table.SetVerifyConstraints(True)
 Table.UseFKTables(True)
@@ -286,7 +287,7 @@ del benchdata
 #      ==============================================
 #         Update Section
 #      ==============================================
-benchdata =drutils("Schema1_Update_expt_"+NumberRowsStr+"_","b")
+benchdata =drutils("Schema2_Update_expt_"+NumberRowsStr+"_","b")
 
 noConstraintTimesAll = []
 if sys.argv[1] == "AS":
@@ -326,7 +327,7 @@ if sys.argv[1] == "AS":
 #      ==============================================
 #         Delete Section
 #      ==============================================
-benchdata =drutils("Schema1_Delete_expt_"+NumberRowsStr+"_","b")
+benchdata =drutils("Schema2_Delete_expt_"+NumberRowsStr+"_","b")
 
 if sys.argv[1] == "AS":
     Table.SetVerifyConstraints(True)
