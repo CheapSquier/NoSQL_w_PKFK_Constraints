@@ -171,16 +171,16 @@ class Table:
             updateTableStr += colName + " = '" + str(listOfValues[self.Columns.index(colName)]) + "', "
         updateTableStr = updateTableStr[0:len(updateTableStr)-2] + " WHERE " #remove the extra ,<space>, add WHERE
         for PKcol in self.PK:
-            updateTableStr += PKcol + " = " + str(listOfValues[self.Columns.index(PKcol)]) + ","
-        updateTableStr = updateTableStr[0:len(updateTableStr)-1] + ";" #remove the extra , add ;
+            updateTableStr += PKcol + " = " + str(listOfValues[self.Columns.index(PKcol)]) + " AND "
+        updateTableStr = updateTableStr[0:len(updateTableStr)-5] + ";" #remove the extra AND add ;
         success = self.sendToSQLDB(updateTableStr, "Update SQL table")
         return success
     def Delete(self, listOfPKValues):
         # DELETE FROM schema1_a WHERE col0 = 1;
         deleteTableStr = "DELETE FROM " + self.TableName + " WHERE "
         for PKcol in self.PK:
-            deleteTableStr += PKcol + " = " + str(listOfPKValues[self.Columns.index(PKcol)]) + ","
-        deleteTableStr = deleteTableStr[0:len(deleteTableStr)-1] + ";" #remove the extra , add ;
+            deleteTableStr += PKcol + " = " + str(listOfPKValues[self.Columns.index(PKcol)]) + " AND "
+        deleteTableStr = deleteTableStr[0:len(deleteTableStr)-5] + ";" #remove the extra , add ;
         success = self.sendToSQLDB(deleteTableStr, "Delete rows from SQL table")
         return success
     def sendToSQLDB(self, strToSend, possibleErrMsg):
