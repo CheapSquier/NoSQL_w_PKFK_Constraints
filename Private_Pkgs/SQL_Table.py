@@ -126,7 +126,7 @@ class Table:
         # instantiation process (after columns, PKs, and FKs have been specified)
         createTableStr = "CREATE TABLE " + self.TableName + " ("
         for column in self.Columns:
-            createTableStr = createTableStr + column + " VARCHAR(10), "
+            createTableStr = createTableStr + column + " VARCHAR(25), "
         # Start the constraint specification, PK(s) first
         createTableStr = createTableStr + "CONSTRAINT " + self.TableName + "_PK " + "PRIMARY KEY("
         for PKcolumn in self.PK:
