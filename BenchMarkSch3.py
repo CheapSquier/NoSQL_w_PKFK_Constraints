@@ -32,9 +32,9 @@ from Private_Pkgs.SQL_Table import Table
 from Private_Pkgs.DataRecordingUtils import drutils
 
 def BuildTables():
-    TableA = Table("test_DB_SQL", "Table2A")
+    TableA = Table("test_DB_SEF", "Table3A")
     TableA.AddCol("PKcol_TabA")
-    TableA.AddCol("Data_Column")
+    TableA.AddCol("DataColA")
     TableA.AddPK("PKcol_TabA")
     if TableA.VerifyFKrefsCompletePK(): # In SQL mode, this will create the table
         if _DB_mode == "AS":
@@ -42,121 +42,113 @@ def BuildTables():
         else:
             print(TableA.TableName, "has been created in the SQL database")
 
-    TableB = Table("test_DB_SQL", "Table2B")
+    TableB = Table("test_DB_SEF", "Table3B")
     TableB.AddCol("PKcol_TabB")
-    TableB.AddCol("FK_BtoA")
-    TableB.AddCol("Data_Column")
+    TableB.AddCol("DataColB")
     TableB.AddPK("PKcol_TabB")
-    TableB.AddPK("FK_BtoA")  # *** This is the only difference between Schema 1 and Schema 2
-    TableB.AddFK("FK_BtoA", "Table2A", "PKcol_TabA")
     if TableB.VerifyFKrefsCompletePK():
         if _DB_mode == "AS":
             print(TableB.TableName, "has complete FK to PK references (or none exist in table)")
         else:
             print(TableB.TableName, "has been created in the SQL database")
 
+    TableC = Table("test_DB_SEF", "Table3C")
+    TableC.AddCol("FK_CtoA")
+    TableC.AddCol("FK_CtoB")
+    TableC.AddCol("PKcol_TabC")
+    TableC.AddCol("DataColC")
+    TableC.AddPK("FK_CtoA")
+    TableC.AddPK("FK_CtoB")
+    TableC.AddPK("PKcol_TabC")
+    TableC.AddFK("FK_CtoA", "Table3A", "PKcol_TabA")
+    TableC.AddFK("FK_CtoB", "Table3B", "PKcol_TabB")
+    if TableC.VerifyFKrefsCompletePK():
+        if _DB_mode == "AS":
+            print(TableC.TableName, "has complete FK to PK references (or none exist in table)")
+        else:
+            print(TableC.TableName, "has been created in the SQL database")
+
 def InsertData(NumberHashesPerFK):
-    insertA_times = []
-    insertB_times = []
+    TableC_times = []
     insertAll_times = {}
     TableA = Table._registry[0]
     TableB = Table._registry[1]
-    print(TableA.TableName)
-    print(TableB.TableName)
-    # Insert rows for Table A
+    TableC = Table._registry[2]
     for rowNum in range(0,int(NumberRows)):
-        thisRow =[]
-        thisRow.append(rowNum) #The PK
-        thisRow.append("datadata") # constant length
-        t0 = time.time()
+        thisRow = [rowNum,"datadata"]
         TableA.Insert(thisRow)
-        t1 = time.time()
-        insertA_times.append((t1 - t0) * 1000) # Times are in S so *1000 makes units mS
-    # Insert rows for Table B    
+        thisRow = [rowNum,"datadata"]
+        TableB.Insert(thisRow)
+
     for rowNum in range(0,int(NumberRows)):
         FKindex = math.floor(rowNum/NumberHashesPerFK)
-        thisRow =[]
-        thisRow.append(rowNum) #The PK
-        thisRow.append(FKindex) #The FK
-        thisRow.append("datadata") # constant length
+        thisRow =  [FKindex, FKindex, rowNum, "datadata"] #The composite PK. Both rowNums are FKs
         t0 = time.time()
-        TableB.Insert(thisRow)
+        TableC.Insert(thisRow)
         t1 = time.time()
-        insertB_times.append((t1 - t0) * 1000) # Times are in S so *1000 makes units mS
-    insertAll_times["Table2A"] = insertA_times
-    insertAll_times["Table2B"] = insertB_times
+        TableC_times.append((t1 - t0) * 1000) # Times are in S so *1000 makes units mS
+    insertAll_times["TableC"] = TableC_times
     return(insertAll_times)
 
 def UpdateData(NumberHashesPerFK):
-    A_times = []
-    B_times = []
+    TableC_times = []
     All_times = {}
-    TableA = Table._registry[0]
-    TableB = Table._registry[1]
-    print(TableA.TableName)
-    print(TableB.TableName)
-    #Setup a random, non repeating sequence
-    random.seed(42)
-    row_seq = list(range(0, NumberRows))
-    random.shuffle(row_seq)
-
-    for idx in range(0, int(NumberRows)):
-        thisRow =[]
-        thisRow.append(row_seq[idx]) #The PK
-        thisRow.append("dataXXXX") # constant length
-        t0 = time.time()
-        TableA.Update(thisRow)
-        #print("Table2A update: ", thisRow)
-        t1 = time.time()
-        A_times.append((t1 - t0) * 1000) # Times are in S so *1000 makes units mS
-        
-    for idx in range(0, int(NumberRows)):
-        FKindex = math.floor(row_seq[idx]/NumberHashesPerFK)
-        thisRow =[]
-        thisRow.append(row_seq[idx]) #The PK
-        thisRow.append(FKindex) #The FK (ascending.. mixing ascending and descending FK in insert and update can trigger FK constraints)
-        thisRow.append("dataXXXX") # constant length
-        t0 = time.time()
-        TableB.Update(thisRow)
-        #print("Table2B update: ", thisRow)
-        t1 = time.time()
-        B_times.append((t1 - t0) * 1000) # Times are in S so *1000 makes units mS
-    All_times["Table2A"] = A_times
-    All_times["Table2B"] = B_times
-    return(All_times)
-
-def DeleteData(NumberHashesPerFK):
-    A_times = []
-    B_times = []
-    All_times = {}
-    TableA = Table._registry[0]
-    TableB = Table._registry[1]
-    print(TableA.TableName)
-    print(TableB.TableName)
+    #TableA = Table._registry[0] # Not updating these tables so these lines aren't needed
+    #TableB = Table._registry[1]
+    TableC = Table._registry[2]
     #Setup a random, no repeating sequence
     random.seed(42)
     row_seq = list(range(0, NumberRows))
     random.shuffle(row_seq)
+    for idx in range(0, int(NumberRows)):
+        FKindex = math.floor(row_seq[idx]/NumberHashesPerFK)
+        thisRow =[]
+        thisRow.append(FKindex) #1st element of PK
+        thisRow.append(FKindex) #2nd element of PK
+        thisRow.append(row_seq[idx]) # 3rd element of PK that will make the PK unique
+        thisRow.append("dataXXXX")
+        t0 = time.time()
+        TableC.Update(thisRow)
+        #print("TableA update: ", thisRow)
+        t1 = time.time()
+        TableC_times.append((t1 - t0) * 1000) # Times are in S so *1000 makes units mS
+        
+    All_times["TableC"] = TableC_times
+    return(All_times)
 
+def DeleteData(NumberHashesPerFK):
+    TableA_times = []
+    TableB_times = []
+    TableC_times = []
+    All_times = {}
+    TableA = Table._registry[0]
+    TableB = Table._registry[1]
+    TableC = Table._registry[2]
+    #Setup a random, no repeating sequence
+    random.seed(42)
+    row_seq = list(range(0, NumberRows))
+    random.shuffle(row_seq)
+    
     for idx in range(0, int(NumberRows/2)):
         FKindex = math.floor(row_seq[idx]/NumberHashesPerFK)
-        A_Row = []
-        B_Row = []
-        A_Row.append(row_seq[idx]) #The PK
-        B_Row.append(row_seq[idx]) #The PK for Table B
-        B_Row.append(FKindex) #The 2nd PKcol for Table B (also an FK) # *** Difference in execution for Schema1 and Schema2
         t0 = time.time()
-        TableB.Delete(B_Row)
+        TableC.Delete([row_seq[idx], row_seq[idx], FKindex])
         t1 = time.time()
-        B_times.append((t1 - t0) * 1000) # Times are in S so *1000 makes units mS
+        TableC_times.append((t1 - t0) * 1000) # Times are in S so *1000 makes units mS
         
         t0 = time.time()
-        TableA.Delete(A_Row)
+        TableA.Delete([row_seq[idx]])
         t1 = time.time()
-        A_times.append((t1 - t0) * 1000) # Times are in S so *1000 makes units mS
+        TableA_times.append((t1 - t0) * 1000) # Times are in S so *1000 makes units mS
         
-    All_times["Table2A"] = A_times
-    All_times["Table2B"] = B_times
+        t0 = time.time()
+        TableB.Delete([row_seq[idx]])
+        t1 = time.time()
+        TableB_times.append((t1 - t0) * 1000) # Times are in S so *1000 makes units mS
+        
+    All_times["TableC"] = TableC_times
+    All_times["TableA"] = TableA_times
+    All_times["TableB"] = TableB_times
     return(All_times)
 
 def report_times(insertAll_times, silent = False):
@@ -223,7 +215,9 @@ if sys.argv[1] == "SQL":
     )
     sqlCursor = client.cursor(buffered=True)
     Table.SetTableClient(client, sqlCursor)
-
+if sys.argv[1] != "SQL" and sys.argv[1] != "AS":
+    print("EXITING: Must specify AS or SQL database to run with")
+    sys.exit(1)
 
 
 # ==============================================
@@ -247,7 +241,7 @@ else:
 #         Insert Section
 #      ==============================================
 #Initialize data reporting
-benchdata =drutils("Schema2_Insert_expt_"+sys.argv[1]+"_"+NumberRowsStr+"_","b")
+benchdata =drutils("Schema3_Insert_expt_"+sys.argv[1]+"_"+NumberRowsStr+"_","b")
 
 Table.SetVerifyConstraints(True)
 Table.UseFKTables(True)
@@ -286,7 +280,7 @@ del benchdata
 #      ==============================================
 #         Update Section
 #      ==============================================
-benchdata =drutils("Schema2_Update_expt_"+sys.argv[1]+"_"+NumberRowsStr+"_","b")
+benchdata =drutils("Schema3_Update_expt_"+sys.argv[1]+"_"+NumberRowsStr+"_","b")
 
 noConstraintTimesAll = []
 if sys.argv[1] == "AS":
@@ -326,7 +320,7 @@ if sys.argv[1] == "AS":
 #      ==============================================
 #         Delete Section
 #      ==============================================
-benchdata =drutils("Schema2_Delete_expt_"+sys.argv[1]+"_"+NumberRowsStr+"_","b")
+benchdata =drutils("Schema3_Delete_expt_"+sys.argv[1]+"_"+NumberRowsStr+"_","b")
 
 if sys.argv[1] == "AS":
     Table.SetVerifyConstraints(True)

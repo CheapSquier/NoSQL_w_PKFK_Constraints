@@ -14,6 +14,7 @@ import time
 import random
 import statistics
 import pprint
+import math
 
 print("Current Python version: ", sys.version_info[0],".",sys.version_info[1],".",sys.version_info[2])
 
@@ -31,10 +32,9 @@ from Private_Pkgs.SQL_Table import Table
 from Private_Pkgs.DataRecordingUtils import drutils
 
 def BuildTables():
-    TableA = Table("test_DB_SQL", "TableA")
+    TableA = Table("test_DB_SQL", "Table1A")
     TableA.AddCol("PKcol_TabA")
-    for colNum in range(1,63+1):
-        TableA.AddCol("col"+str(colNum))
+    TableA.AddCol("Data_Column")
     TableA.AddPK("PKcol_TabA")
     if TableA.VerifyFKrefsCompletePK(): # In SQL mode, this will create the table
         if _DB_mode == "AS":
@@ -42,20 +42,19 @@ def BuildTables():
         else:
             print(TableA.TableName, "has been created in the SQL database")
 
-    TableB = Table("test_DB_SQL", "TableB")
+    TableB = Table("test_DB_SQL", "Table1B")
     TableB.AddCol("PKcol_TabB")
     TableB.AddCol("FK_BtoA")
-    for colNum in range(2,63+1):
-        TableB.AddCol("col"+str(colNum))
+    TableB.AddCol("Data_Column")
     TableB.AddPK("PKcol_TabB")
-    TableB.AddFK("FK_BtoA", "TableA", "PKcol_TabA")
+    TableB.AddFK("FK_BtoA", "Table1A", "PKcol_TabA")
     if TableB.VerifyFKrefsCompletePK():
         if _DB_mode == "AS":
             print(TableB.TableName, "has complete FK to PK references (or none exist in table)")
         else:
             print(TableB.TableName, "has been created in the SQL database")
 
-def InsertData():
+def InsertData(NumberHashesPerFK):
     insertA_times = []
     insertB_times = []
     insertAll_times = {}
@@ -63,32 +62,32 @@ def InsertData():
     TableB = Table._registry[1]
     print(TableA.TableName)
     print(TableB.TableName)
+    # Insert rows for Table A
     for rowNum in range(0,int(NumberRows)):
         thisRow =[]
         thisRow.append(rowNum) #The PK
-        for _ in range(1,63+1): # create data for 63 columns
-            thisRow.append("datadata") # constant length
+        thisRow.append("datadata") # add a single data column
         t0 = time.time()
         TableA.Insert(thisRow)
         t1 = time.time()
         insertA_times.append((t1 - t0) * 1000) # Times are in S so *1000 makes units mS
         
+    # Insert rows for Table B
     for rowNum in range(0,int(NumberRows)):
+        FKindex = math.floor(rowNum/NumberHashesPerFK)
         thisRow =[]
         thisRow.append(rowNum) #The PK
-        #thisRow.append(int(NumberRows) - 1 - rowNum) #The FK # use this for a descending sequence
-        thisRow.append(rowNum) #The FK (yes, same value as the PK) #ascending sequence
-        for _ in range(2,63+1): #create data for 62 columns
-            thisRow.append("datadata") # constant length
+        thisRow.append(FKindex) #The FK
+        thisRow.append("datadata") # add a single data column
         t0 = time.time()
         TableB.Insert(thisRow)
         t1 = time.time()
         insertB_times.append((t1 - t0) * 1000) # Times are in S so *1000 makes units mS
-    insertAll_times["TableA"] = insertA_times
-    insertAll_times["TableB"] = insertB_times
+    insertAll_times["Table1A"] = insertA_times
+    insertAll_times["Table1B"] = insertB_times
     return(insertAll_times)
 
-def UpdateData():
+def UpdateData(NumberHashesPerFK):
     A_times = []
     B_times = []
     All_times = {}
@@ -104,32 +103,29 @@ def UpdateData():
     for idx in range(0, int(NumberRows)):
         thisRow =[]
         thisRow.append(row_seq[idx]) #The PK
-        for _ in range(1,63+1): # create data for 63 columns
-            thisRow.append("dataXXXX") # constant length
+        thisRow.append("dataXXXX") # constant length
         t0 = time.time()
         TableA.Update(thisRow)
-        #print("TableA update: ", thisRow)
+        #print("Table1A update: ", thisRow)
         t1 = time.time()
         A_times.append((t1 - t0) * 1000) # Times are in S so *1000 makes units mS
         
     for idx in range(0, int(NumberRows)):
+        FKindex = math.floor(row_seq[idx]/NumberHashesPerFK)
         thisRow =[]
         thisRow.append(row_seq[idx]) #The PK
-        #thisRow.append(row_seq[int(NumberRows) - 1 - idx]) #The FK #descending
-        thisRow.append(row_seq[idx]) #The FK (ascending.. mixing ascending and descending FK in insert and update can trigger FK constraints)
-        #thisRow.append(row_seq[idx]) #The FK #ascending
-        for _ in range(2,63+1): # create data for 62 columns
-            thisRow.append("dataXXXX") # constant length
+        thisRow.append(FKindex) #The FK (ascending.. mixing ascending and descending FK in insert and update can trigger FK constraints)
+        thisRow.append("dataXXXX") # constant length
         t0 = time.time()
         TableB.Update(thisRow)
-        #print("TableB update: ", thisRow)
+        #print("Table1B update: ", thisRow)
         t1 = time.time()
         B_times.append((t1 - t0) * 1000) # Times are in S so *1000 makes units mS
-    All_times["TableA"] = A_times
-    All_times["TableB"] = B_times
+    All_times["Table1A"] = A_times
+    All_times["Table1B"] = B_times
     return(All_times)
 
-def DeleteData():
+def DeleteData(NumberHashesPerFK):
     A_times = []
     B_times = []
     All_times = {}
@@ -157,8 +153,8 @@ def DeleteData():
         t1 = time.time()
         A_times.append((t1 - t0) * 1000) # Times are in S so *1000 makes units mS
         
-    All_times["TableA"] = A_times
-    All_times["TableB"] = B_times
+    All_times["Table1A"] = A_times
+    All_times["Table1B"] = B_times
     return(All_times)
 
 def report_times(insertAll_times, silent = False):
@@ -232,10 +228,12 @@ if sys.argv[1] == "SQL":
 #    Start of Main Program Loop
 # ==============================================
 
-if len(sys.argv) == 0:
+if len(sys.argv) == 1: # Only specified the DB type, so input params
     NumberRows = input("How many records to BenchMark?")
+    FKreptFactor = int(input("What FK repetition factor to use?"))
 else:
-    NumberRows = sys.argv[2]
+    NumberRows = int(sys.argv[2])
+    FKreptFactor = int(sys.argv[3])
 
 NumberRows = int(NumberRows)
 if NumberRows >= 1000:
@@ -247,7 +245,7 @@ else:
 #         Insert Section
 #      ==============================================
 #Initialize data reporting
-benchdata =drutils("Schema1_Insert_expt_"+NumberRowsStr+"_","b")
+benchdata =drutils("Schema1_Insert_expt_"+sys.argv[1]+"_"+NumberRowsStr+"_","b")
 
 Table.SetVerifyConstraints(True)
 Table.UseFKTables(True)
@@ -257,7 +255,7 @@ BuildTables()
 
 # ***Insert priming data, collect Insert times***
 insertStartTime = time.time() #insertStartTime/EndTime only use to give an overall time for the insert loop
-insertAll_times = InsertData()
+insertAll_times = InsertData(FKreptFactor)
 insertEndTime = time.time()
 
 # ### Calculate Time Statistics (Checking constraints during Insert)
@@ -273,7 +271,7 @@ if sys.argv[1] == "AS":
     Table.UseFKTables(False)
 
     BuildTables()
-    insertAll_times = InsertData()
+    insertAll_times = InsertData(FKreptFactor)
     noConstraintTimesAll = report_times(insertAll_times)
 
 # ### Calculate Time Statistics (No constraint verification during Insert)    Close the data object
@@ -286,14 +284,14 @@ del benchdata
 #      ==============================================
 #         Update Section
 #      ==============================================
-benchdata =drutils("Schema1_Update_expt_"+NumberRowsStr+"_","b")
+benchdata =drutils("Schema1_Update_expt_"+sys.argv[1]+"_"+NumberRowsStr+"_","b")
 
 noConstraintTimesAll = []
 if sys.argv[1] == "AS":
     ### We already have tables that do NOT use constraints or FK Tables ###
     #Therefore, the first run of Update and Delete will be with ***No*** constraints
     updateStartTime = time.time() #updateStartTime/EndTime only use to give an overall time for the update loop
-    updateAll_times = UpdateData()
+    updateAll_times = UpdateData(FKreptFactor)
     updateEndTime = time.time()
 
     noConstraintTimesAll = report_times(updateAll_times)
@@ -305,10 +303,10 @@ if sys.argv[1] == "AS":
     Table.UseFKTables(True)
 
     BuildTables()
-    InsertData()
+    InsertData(FKreptFactor)
 
 updateStartTime = time.time() #updateStartTime/EndTime only use to give an overall time for the update loop
-updateAll_times = UpdateData()
+updateAll_times = UpdateData(FKreptFactor)
 updateEndTime = time.time()
 
 withConstraintTimesAll = report_times(updateAll_times)
@@ -326,17 +324,17 @@ if sys.argv[1] == "AS":
 #      ==============================================
 #         Delete Section
 #      ==============================================
-benchdata =drutils("Schema1_Delete_expt_"+NumberRowsStr+"_","b")
+benchdata =drutils("Schema1_Delete_expt_"+sys.argv[1]+"_"+NumberRowsStr+"_","b")
 
 if sys.argv[1] == "AS":
     Table.SetVerifyConstraints(True)
     Table.UseFKTables(True)
 
     BuildTables()
-    InsertData()
+    InsertData(FKreptFactor)
 
 deleteStartTime = time.time() #deleteStartTime/EndTime only use to give an overall time for the delete loop
-deleteAll_times = DeleteData()
+deleteAll_times = DeleteData(FKreptFactor)
 deleteEndTime = time.time()
 
 withConstraintTimesAll = report_times(deleteAll_times)
@@ -348,10 +346,10 @@ if sys.argv[1] == "AS":
     Table.UseFKTables(False)
 
     BuildTables()
-    InsertData()
+    InsertData(FKreptFactor)
 
     deleteStartTime = time.time() #deleteStartTime/EndTime only use to give an overall time for the delete loop
-    deleteAll_times = DeleteData()
+    deleteAll_times = DeleteData(FKreptFactor)
     deleteEndTime = time.time()
 
     noConstraintTimesAll = report_times(deleteAll_times)
