@@ -3,11 +3,8 @@
 
 # In[1]:
 
-
-RunningDB = True
-#import aerospike
-import mysql.connector
-from mysql.connector import errorcode
+RunActualDB = True
+from Private_Pkgs.DataRecordingUtils import drutils
 import sys
 import json
 import time
@@ -21,18 +18,23 @@ print("Current Python version: ", sys.version_info[0],".",sys.version_info[1],".
 _useAllTimes = False
 _print_raw = False
 _DB_mode = sys.argv[1]
-if _DB_mode != "AS" and _DB_mode != "SQL":
+if _DB_mode != "AS" and _DB_mode != "SQL":                       # FIXME Is this code redundant or incomplete?
     print("ERROR: MUST SPECIFY AS OR SQL MODE AS 1ST PARAMETER")
     exit()
+# Import the Table class used to build Table schema. Use the class specific to AeroSpike or SQL
+if _DB_mode == "AS":
+    # Aerospike won't be a available on a windows machine so don't try to load the API
+    import aerospike
+    from Private_Pkgs.AS_Table import Table # Defines Table class used to build Table schema for AeroSpike
+else:
+    import mysql.connector
+    from mysql.connector import errorcode
+    from Private_Pkgs.SQL_Table import Table
+
 # In[2]:
 
-#Import the Table class used to build Table schema
-#from Private_Pkgs.AS_Table import Table
-from Private_Pkgs.SQL_Table import Table
-from Private_Pkgs.DataRecordingUtils import drutils
-
-def BuildTables():
-    TableA = Table("test_DB_SQL", "Table2A")
+def BuildTables(database_namespace):
+    TableA = Table(database_namespace, "Table2A")
     TableA.AddCol("PKcol_TabA")
     TableA.AddCol("Data_Column")
     TableA.AddPK("PKcol_TabA")
@@ -42,7 +44,7 @@ def BuildTables():
         else:
             print(TableA.TableName, "has been created in the SQL database")
 
-    TableB = Table("test_DB_SQL", "Table2B")
+    TableB = Table(database_namespace, "Table2B")
     TableB.AddCol("PKcol_TabB")
     TableB.AddCol("FK_BtoA")
     TableB.AddCol("Data_Column")
@@ -183,12 +185,12 @@ def report_statistics(withConBenchTimeAll, noConBenchTimeAll):
         print("Statistics for: ", withConKey)
         withConBenchTime = withConBenchTimeAll[withConKey]
         noConBenchTime = noConBenchTimeAll[noConKey]
-        benchdata.rcrd_data()
+        benchdata.rcrd_data("Statistics for: " + withConKey)
         benchdata.rcrd_data("\tWith Constraints:\t\tWithout Constraints\t\tPercent Difference, {} rows".format(noConBenchTime[0]))
         benchdata.rcrd_data("MEDIAN:\t{} \t\t{} ms\t\t{}".format(withConBenchTime[2],noConBenchTime[2],
              (withConBenchTime[2]-noConBenchTime[2])/noConBenchTime[2]*100))
         benchdata.rcrd_data("MEAN:\t{} \t\t{} ms\t\t{}".format(withConBenchTime[3],noConBenchTime[3],
-             (withConBenchTime[3]-noConBenchTime[2])/noConBenchTime[3]*100))
+             (withConBenchTime[3]-noConBenchTime[3])/noConBenchTime[3]*100))
         benchdata.rcrd_data("STDEV:\t{} \t\t{} ms\t\t{}".format(withConBenchTime[4],noConBenchTime[4],
              (withConBenchTime[4]-noConBenchTime[4])/noConBenchTime[4]*100))
         benchdata.rcrd_data()
@@ -201,10 +203,12 @@ Table.GetDebugMode()
 if sys.argv[1] == "AS":
     # Specify the IP addresses and ports for the Aerospike cluster
     config = {
-    'hosts': [ ('18.221.189.247', 3000), ('18.224.137.105', 3000) ]
+    'hosts': [ ('18.222.211.167', 3000), ('3.16.180.184', 3000) ]
     }
     # Create a client and connect it to the cluster
-    print("RunningDB is", RunningDB)
+    print("RunActualDB is", RunActualDB)
+    print("Benchmarking with AeroSpike, Schema 2")
+    database="test_DB_SEF"
     try:
         client = aerospike.client(config).connect()
         #Be sure to tell the Table class the name of the client it's talking to
@@ -216,13 +220,14 @@ if sys.argv[1] == "SQL":
     client = mysql.connector.connect(
     host="127.0.0.1",
     user="root",
-    database="test_db_sql"
+    database="test_DB_SQL"
     #host="18.191.176.248",
     #user="demouser",
     #passwd="DrBajaj2*",
     )
     sqlCursor = client.cursor(buffered=True)
     Table.SetTableClient(client, sqlCursor)
+    print("Benchmarking with MySQL, Schema 2")
 
 
 
@@ -253,7 +258,7 @@ Table.SetVerifyConstraints(True)
 Table.UseFKTables(True)
 
 # ***Build the tables***
-BuildTables()
+BuildTables(database)
 
 # ***Insert priming data, collect Insert times***
 insertStartTime = time.time() #insertStartTime/EndTime only use to give an overall time for the insert loop
@@ -272,16 +277,16 @@ if sys.argv[1] == "AS":
     Table.SetVerifyConstraints(False)
     Table.UseFKTables(False)
 
-    BuildTables()
+    BuildTables(database)
     insertAll_times = InsertData(FKreptFactor)
     noConstraintTimesAll = report_times(insertAll_times)
+    report_statistics(withConstraintTimesAll, noConstraintTimesAll) # Only call this for Aerospike since that's 
+                                                                    # where we have a constraint vs no constraint
 
 # ### Calculate Time Statistics (No constraint verification during Insert)    Close the data object
 benchdata.rcrd_data("Total Insert Time: {} seconds, 2 tables".format(insertEndTime - insertStartTime))
-report_statistics(withConstraintTimesAll, noConstraintTimesAll) # report_statistics will handle empty noConstraint lists
 benchdata.close()
 del benchdata
-
 
 #      ==============================================
 #         Update Section
@@ -304,7 +309,7 @@ if sys.argv[1] == "AS":
     Table.SetVerifyConstraints(True)
     Table.UseFKTables(True)
 
-    BuildTables()
+    BuildTables(database)
     InsertData(FKreptFactor)
 
 updateStartTime = time.time() #updateStartTime/EndTime only use to give an overall time for the update loop
@@ -312,10 +317,10 @@ updateAll_times = UpdateData(FKreptFactor)
 updateEndTime = time.time()
 
 withConstraintTimesAll = report_times(updateAll_times)
+if sys.argv[1] == "AS": # Only need to call this for AS since its with/without constraints
+    report_statistics(withConstraintTimesAll, noConstraintTimesAll)
 
 benchdata.rcrd_data("Total Update Time: {} seconds, 2 tables".format(updateEndTime - updateStartTime))
-report_statistics(withConstraintTimesAll, noConstraintTimesAll)
-
 benchdata.close()
 del benchdata
 
@@ -332,7 +337,7 @@ if sys.argv[1] == "AS":
     Table.SetVerifyConstraints(True)
     Table.UseFKTables(True)
 
-    BuildTables()
+    BuildTables(database)
     InsertData(FKreptFactor)
 
 deleteStartTime = time.time() #deleteStartTime/EndTime only use to give an overall time for the delete loop
@@ -347,7 +352,7 @@ if sys.argv[1] == "AS":
     Table.SetVerifyConstraints(False)
     Table.UseFKTables(False)
 
-    BuildTables()
+    BuildTables(database)
     InsertData(FKreptFactor)
 
     deleteStartTime = time.time() #deleteStartTime/EndTime only use to give an overall time for the delete loop
@@ -356,8 +361,9 @@ if sys.argv[1] == "AS":
 
     noConstraintTimesAll = report_times(deleteAll_times)
 
+    report_statistics(withConstraintTimesAll, noConstraintTimesAll) # Only call this for Aerospike since that's 
+                                                                    # where we have a constraint vs no constraint
 benchdata.rcrd_data("Total Delete Time: {} seconds, 2 tables".format(deleteEndTime - deleteStartTime))
-report_statistics(withConstraintTimesAll, noConstraintTimesAll)
 
 benchdata.close()
 del benchdata

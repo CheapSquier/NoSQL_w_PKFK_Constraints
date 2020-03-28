@@ -1,17 +1,21 @@
 import sys
 import datetime
+from pathlib import Path
 
 class drutils:
-    'Class with utils to make recording data easier'
+    'Class with utils to make data recording (dr) easier'
 
     #Class variables
     _outputModeList = ["f","s","b"] # file, screen both
-    _dataFolderRelativePath = "..\\..\\local_data\\"
+    #_dataFolderRelativePath = "..\\..\\local_data\\"
+    _dataFolderRelativePath = Path("../data/")
+    if _dataFolderRelativePath.is_dir() == False:
+        print("ERROR: " + str(_dataFolderRelativePath) + "doesn't exist, please create one!")
 
     #Class methods
     @staticmethod
     def createTS_filename(prefix):
-        filename = drutils._dataFolderRelativePath + prefix + "{:%Y-%m-%d_%H%M%S}".format(datetime.datetime.now()) + ".txt"
+        filename = drutils._dataFolderRelativePath / str(prefix + "{:%Y-%m-%d_%H%M%S}".format(datetime.datetime.now()) + ".txt")
         return filename
 
     #constructor
