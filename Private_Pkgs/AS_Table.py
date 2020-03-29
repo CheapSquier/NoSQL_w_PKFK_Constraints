@@ -119,19 +119,19 @@ class Table:
             self.Columns.append(colName)
             return True
         else:
-            print("AddCol with column name ", colName, "ignored: Name already.")
+            print("ERROR: AddCol with column name ", colName, "ignored: Name already exists.")
             return False
     def AddPK(self, colName):
         if colName in self.Columns:
             self.PK.append(colName)
             return True
         else:
-            print("AddPK with column name ", colName, " ignored: Not a Column in Table.")
+            print("ERROR: AddPK with column name ", colName, " ignored: Not a Column in Table.")
             return False
     def AddFK(self, colName, refTableName, refColName):
         #Verify FK name exists in table
         if colName not in self.Columns:
-            print("AddFK with column name ", colName, " ignored: Not a Column in Table.")
+            print("ERROR: AddFK with column name", colName, "to", refColName, "ignored: Not a Column in Table.")
             return False
         #Verify Ref table exists
          #Determine refTable (object) from refTableName
@@ -140,7 +140,7 @@ class Table:
             if (indexTable.NameSpace == self.NameSpace) and (indexTable.TableName == refTableName):
                 refTable = indexTable
         if not refTable:
-            print("AddFK with ref Table name ", refTable, " ignored: Not a Table in Namespace.")
+            print("ERROR: AddFK with ref Table name ", refTableName, " ignored: Not a Table in Namespace.")
             return False
         #Verify Ref column exits in Ref table
         if refColName in refTable.Columns:
@@ -154,7 +154,7 @@ class Table:
             self.FKtables[str(colName+"_FKTable")].AddPK(colName+"_FKPK")
             return True
         else:
-            print("AddFK with ref Column name ", refColName, " ignored: Not a Column in ", refTable)
+            print("ERROR: AddFK with ref Column name ", refColName, " ignored: Not a Column in ", refTableName)
             return False
     def VerifyStructure(self, listOfValues):
         if len(listOfValues) != len(self.Columns):
@@ -183,7 +183,7 @@ class Table:
         return True
     def VerifyFKvalExists(self, listOfFKValues): # Suspect this may not work for multiple FK values or FK refs multivariate PK
         if len(listOfFKValues) != len(self.FK):
-            print("VerifyFKvalExists with FKs ", listOfValues, " failed: Incorrect number of FK attributes.")
+            print("VerifyFKvalExists with FKs ", listOfFKValues, " failed: Incorrect number of FK attributes.")
             return False
         #1. When verifying FKs, need to group by refTable.
         #2. For the set of FKs for each refTable, get the hash and see if it exists in the refTables list of Rows (hashes)
@@ -236,7 +236,7 @@ class Table:
                             PKfound+=1
                             print("thisPK == thisFK refColName: ",thisPK, thisFK["refColName"], "with #PKs found", PKfound)
                 if PKfound != len(thisRefTable.PK):
-                    print(self.TableName, "has FK refs to table ", thisRefTable.TableName," but does not ref", thisPK)
+                    print("ERROR:", self.TableName, "has incomplete FK refs to table",thisRefTable.TableName,"PKs, does not ref", thisPK)
                     return False
             # If we're here, FK/PK refs are ok. Make a FKnames list
             for FKdict in self.FK:
