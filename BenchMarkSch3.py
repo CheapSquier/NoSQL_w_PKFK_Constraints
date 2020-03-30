@@ -7,6 +7,7 @@ RunActualDB = True
 from Private_Pkgs.DataRecordingUtils import drutils
 import sys
 import json
+import datetime
 import time
 import random
 import statistics
@@ -18,6 +19,7 @@ print("Current Python version: ", sys.version_info[0],".",sys.version_info[1],".
 _useAllTimes = False
 _print_raw = False
 _DB_mode = sys.argv[1]
+_SchemaNumber = 1
 if _DB_mode != "AS" and _DB_mode != "SQL":                       # FIXME Is this code redundant or incomplete?
     print("ERROR: MUST SPECIFY AS OR SQL MODE AS 1ST PARAMETER")
     exit()
@@ -188,11 +190,33 @@ def report_statistics(withConBenchTimeAll, noConBenchTimeAll):
         benchdata.rcrd_data()
     return
 
+def logCSVdata(recordedTimes, operation, constraints):
+    global NumberRows
+    global FKreptFactor
+
+    # listOfTimes is a dict of lists. The keys are the dict names, so we'll have to index thru to add the table names
+    # for the calls to log_csv
+    #From Module: X             X                             X          X 
+    #From call:                               X      X                                X        |   list of times |
+    #              DB      ,   schema, ,  operation , table, rows ,   FK rep    ,   constrt  , mean, median, stdev  
+    #            AS|SQL    ,    1-3    , Ins|Upd|Del, str,    nr  ,     FKrF     , True|False  
+
+    #
+    for tableName in recordedTimes:
+        csv_list = [_DB_mode, _SchemaNumber, operation, tableName, NumberRows, FKreptFactor]
+        csv_list.append(statistics.mean(recordedTimes[tableName]))
+        csv_list.append(statistics.median(recordedTimes[tableName]))
+        csv_list.append(statistics.stdev(recordedTimes[tableName]))
+        # Now append a timestamp
+        csv_list.append(str("{:%Y-%m-%d_%H%M%S}".format(datetime.datetime.now())))
+        csvdata.log_csv2file(csv_list)
+    return 
+
 Table.SetDebugMode(False)
 Table.GetDebugMode()
 
 # ***Open communication with the database***
-if sys.argv[1] == "AS":
+if _DB_mode == "AS":
     # Specify the IP addresses and ports for the Aerospike cluster
     config = {
     'hosts': [ ('18.222.211.167', 3000), ('3.16.180.184', 3000) ]
@@ -208,7 +232,7 @@ if sys.argv[1] == "AS":
     except:
         print("failed to connect to the cluster with", config['hosts'])
         sys.exit(1)
-if sys.argv[1] == "SQL":
+if _DB_mode == "SQL":
     client = mysql.connector.connect(
     host="127.0.0.1",
     user="root",
@@ -220,7 +244,7 @@ if sys.argv[1] == "SQL":
     sqlCursor = client.cursor(buffered=True)
     Table.SetTableClient(client, sqlCursor)
     print("Benchmarking with MySQL, Schema 3")
-if sys.argv[1] != "SQL" and sys.argv[1] != "AS":
+if _DB_mode != "SQL" and _DB_mode != "AS":
     print("EXITING: Must specify AS or SQL database to run with")
     sys.exit(1)
 
@@ -228,6 +252,7 @@ if sys.argv[1] != "SQL" and sys.argv[1] != "AS":
 # ==============================================
 #    Start of Main Program Loop
 # ==============================================
+csvdata = drutils("NoSQLvsSQL_bench_data","f", "csv")
 
 if len(sys.argv) == 1: # Only specified the DB type, so input params
     NumberRows = input("How many records to BenchMark?")
@@ -246,7 +271,7 @@ else:
 #         Insert Section
 #      ==============================================
 #Initialize data reporting
-benchdata =drutils("Schema3_Insert_expt_"+sys.argv[1]+"_"+NumberRowsStr+"_","b")
+benchdata =drutils("Schema3_Insert_expt_"+_DB_mode+"_"+NumberRowsStr+"_","b")
 
 Table.SetVerifyConstraints(True)
 Table.UseFKTables(True)
@@ -262,7 +287,7 @@ insertEndTime = time.time()
 # ### Calculate Time Statistics (Checking constraints during Insert)
 withConstraintTimesAll = report_times(insertAll_times)
 noConstraintTimesAll = []
-if sys.argv[1] == "AS":
+if _DB_mode == "AS":
     # ### Remove Benchmark Tables
     Table.RemoveAllTables(client, True) #True to wait for confirmation
 
@@ -286,10 +311,10 @@ del benchdata
 #      ==============================================
 #         Update Section
 #      ==============================================
-benchdata =drutils("Schema3_Update_expt_"+sys.argv[1]+"_"+NumberRowsStr+"_","b")
+benchdata =drutils("Schema3_Update_expt_"+_DB_mode+"_"+NumberRowsStr+"_","b")
 
 noConstraintTimesAll = []
-if sys.argv[1] == "AS":
+if _DB_mode == "AS":
     ### We already have tables that do NOT use constraints or FK Tables ###
     #Therefore, the first run of Update and Delete will be with ***No*** constraints
     updateStartTime = time.time() #updateStartTime/EndTime only use to give an overall time for the update loop
@@ -312,23 +337,23 @@ updateAll_times = UpdateData(FKreptFactor)
 updateEndTime = time.time()
 
 withConstraintTimesAll = report_times(updateAll_times)
-if sys.argv[1] == "AS": # Only need to call this for AS since its with/without constraints
+if _DB_mode == "AS": # Only need to call this for AS since its with/without constraints
     report_statistics(withConstraintTimesAll, noConstraintTimesAll)
 
 benchdata.rcrd_data("Total Update Time: {} seconds, 3 tables".format(updateEndTime - updateStartTime))
 benchdata.close()
 del benchdata
 
-if sys.argv[1] == "AS":
+if _DB_mode == "AS":
     #Remove all tables and rebuild them for the delete.
     Table.RemoveAllTables(client, True) #True to wait for confirmation
 '''
 #      ==============================================
 #         Delete Section
 #      ==============================================
-benchdata =drutils("Schema3_Delete_expt_"+sys.argv[1]+"_"+NumberRowsStr+"_","b")
+benchdata =drutils("Schema3_Delete_expt_"+_DB_mode+"_"+NumberRowsStr+"_","b")
 
-if sys.argv[1] == "AS":
+if _DB_mode == "AS":
     Table.SetVerifyConstraints(True)
     Table.UseFKTables(True)
 
@@ -343,7 +368,7 @@ withConstraintTimesAll = report_times(deleteAll_times)
 
 Table.RemoveAllTables(client, True) #True to wait for confirmation
 
-if sys.argv[1] == "AS":
+if _DB_mode == "AS":
     Table.SetVerifyConstraints(False)
     Table.UseFKTables(False)
 
@@ -359,10 +384,13 @@ if sys.argv[1] == "AS":
                                                                     # where we have a constraint vs no constraint
 
 benchdata.rcrd_data("Total Delete Time: {} seconds, 3 tables".format(deleteEndTime - deleteStartTime))
-benchdata.close()
-del benchdata
 
-# Finally, remove the leftover tables
+# Finally, remove the leftover tables, close files and DB client
 Table.RemoveAllTables(client, True) #True to wait for confirmation
 
+csvdata.close()
+del csvdata
+benchdata.close()
+del benchdata
 client.close()
+del client
