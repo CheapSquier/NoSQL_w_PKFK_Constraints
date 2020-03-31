@@ -136,7 +136,8 @@ def DeleteData(NumberHashesPerFK):
     for idx in range(0, int(NumberRows/2)):
         FKindex = math.floor(row_seq[idx]/NumberHashesPerFK)
         t0 = time.time()
-        TableC.Delete([row_seq[idx], row_seq[idx], FKindex])
+        #old TableC.Delete([row_seq[idx], row_seq[idx], FKindex])
+        TableC.Delete([FKindex, FKindex, row_seq[idx]])
         t1 = time.time()
         TableC_times.append((t1 - t0) * 1000) # Times are in S so *1000 makes units mS
         
@@ -324,36 +325,36 @@ del benchdata
 #      ==============================================
 benchdata =drutils("Schema3_Delete_expt_"+_DB_mode+"_"+NumberRowsStr+"_","n")
 
+# IF we're running AeroSpike, tt this point, we just finished Inserting data with Constraints = False
+# Keep that setting and just delete.
+
 if _DB_mode == "AS":
+    Table.SetVerifyConstraints(False)
+    Table.UseFKTables(False)
+
+    deleteStartTime = time.time() #deleteStartTime/EndTime only use to give an overall time for the delete loop
+    deleteAll_times = DeleteData(FKreptFactor)
+    deleteEndTime = time.time()
+
+    withConstraintTimesAll = report_times(deleteAll_times)
+    logCSVdata(deleteAll_times, "Del" , Table.GetVerifyConstraints())
+    Table.RemoveAllTables(client, True) #True to wait for confirmation
+
+    # And since we're deleting with/without constraints for AS, rebuild with constraints so we can Delete again
     Table.SetVerifyConstraints(True)
     Table.UseFKTables(True)
 
-    BuildTables(database)
+    BuildTables(database)   # Have to build tables & insert data so we can delete again
     InsertData(FKreptFactor)
 
 deleteStartTime = time.time() #deleteStartTime/EndTime only use to give an overall time for the delete loop
 deleteAll_times = DeleteData(FKreptFactor)
 deleteEndTime = time.time()
 
-withConstraintTimesAll = report_times(deleteAll_times)
+noConstraintTimesAll = report_times(deleteAll_times)
 logCSVdata(deleteAll_times, "Del" , Table.GetVerifyConstraints())
-Table.RemoveAllTables(client, True) #True to wait for confirmation
-
-if _DB_mode == "AS":
-    Table.SetVerifyConstraints(False)
-    Table.UseFKTables(False)
-
-    BuildTables(database)
-    InsertData(FKreptFactor)
-
-    deleteStartTime = time.time() #deleteStartTime/EndTime only use to give an overall time for the delete loop
-    deleteAll_times = DeleteData(FKreptFactor)
-    deleteEndTime = time.time()
-
-    noConstraintTimesAll = report_times(deleteAll_times)
-    logCSVdata(deleteAll_times, "Del" , Table.GetVerifyConstraints())
-    report_statistics(withConstraintTimesAll, noConstraintTimesAll) # Only call this for Aerospike since that's 
-                                                                    # where we have a constraint vs no constraint
+report_statistics(withConstraintTimesAll, noConstraintTimesAll) # Only call this for Aerospike since that's 
+                                                                # where we have a constraint vs no constraint
 
 benchdata.rcrd_data("Total Delete Time: {} seconds, 3 tables".format(deleteEndTime - deleteStartTime))
 

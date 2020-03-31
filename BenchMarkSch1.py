@@ -267,9 +267,9 @@ if _DB_mode == "SQL":
 # ==============================================
 csvdata = drutils("NoSQLvsSQL_bench_data","f", "csv")
 
-if len(sys.argv) == 1: # Only specified the DB type, so input params
-    NumberRows = input("How many records to BenchMark?")
-    FKreptFactor = int(input("What FK repetition factor to use?"))
+if len(sys.argv) == 1+1: # Only specified the DB type, so input params
+    NumberRows = input("How many records to BenchMark? ")
+    FKreptFactor = int(input("What FK repetition factor to use? "))
 else:
     NumberRows = int(sys.argv[2])
     FKreptFactor = int(sys.argv[3])
