@@ -19,7 +19,7 @@ print("Current Python version: ", sys.version_info[0],".",sys.version_info[1],".
 _useAllTimes = False
 _print_raw = False
 _DB_mode = sys.argv[1]
-_SchemaNumber = 1
+_SchemaNumber = 2
 if _DB_mode != "AS" and _DB_mode != "SQL":                       # FIXME Is this code redundant or incomplete?
     print("ERROR: MUST SPECIFY AS OR SQL MODE AS 1ST PARAMETER")
     exit()
@@ -211,7 +211,7 @@ def logCSVdata(recordedTimes, operation, constraints):
 
     #
     for tableName in recordedTimes:
-        csv_list = [_DB_mode, _SchemaNumber, operation, tableName, NumberRows, FKreptFactor]
+        csv_list = [_DB_mode, _SchemaNumber, operation, tableName, NumberRows, FKreptFactor, constraints]
         csv_list.append(statistics.mean(recordedTimes[tableName]))
         csv_list.append(statistics.median(recordedTimes[tableName]))
         csv_list.append(statistics.stdev(recordedTimes[tableName]))
@@ -242,13 +242,22 @@ if _DB_mode == "AS":
         sys.exit(1)
 if _DB_mode == "SQL":
     client = mysql.connector.connect(
-    host="127.0.0.1",
-    user="root",
+    host="3.16.81.134",
+    user="demouser",
+    passwd="DrBajaj2*",
     database="test_DB_SQL"
-    #host="18.191.176.248",
-    #user="demouser",
-    #passwd="DrBajaj2*",
     )
+    database = "test_DB_SQL"
+    '''-Args for local SQL database
+        host="127.0.0.1",
+        user="root",
+        database="test_DB_SQL"
+       -Args for AWS SQL database
+        host="18.191.176.248",
+        user="demouser",
+        passwd="DrBajaj2*",
+        database="test_DB_SQL"
+    '''
     sqlCursor = client.cursor(buffered=True)
     Table.SetTableClient(client, sqlCursor)
     print("Benchmarking with MySQL, Schema 2")
@@ -277,7 +286,8 @@ else:
 #         Insert Section
 #      ==============================================
 #Initialize data reporting
-benchdata =drutils("Schema2_Insert_expt_"+_DB_mode+"_"+NumberRowsStr+"_","b")
+benchdata =drutils("Schema2_Insert_expt_"+_DB_mode+"_"+NumberRowsStr+"_","n") # if the mode is n, there wil be no logging.
+                                                                              # Change to f, s, or b if logging is needed
 
 Table.SetVerifyConstraints(True)
 Table.UseFKTables(True)
@@ -292,6 +302,7 @@ insertEndTime = time.time()
 
 # ### Calculate Time Statistics (Checking constraints during Insert)
 withConstraintTimesAll = report_times(insertAll_times)
+logCSVdata(insertAll_times, "Ins" , Table.GetVerifyConstraints())
 noConstraintTimesAll = []
 if _DB_mode == "AS":
     # ### Remove Benchmark Tables
@@ -305,6 +316,7 @@ if _DB_mode == "AS":
     BuildTables(database)
     insertAll_times = InsertData(FKreptFactor)
     noConstraintTimesAll = report_times(insertAll_times)
+    logCSVdata(insertAll_times, "Ins" , Table.GetVerifyConstraints())
     report_statistics(withConstraintTimesAll, noConstraintTimesAll) # Only call this for Aerospike since that's 
                                                                     # where we have a constraint vs no constraint
 
@@ -316,7 +328,7 @@ del benchdata
 #      ==============================================
 #         Update Section
 #      ==============================================
-benchdata =drutils("Schema2_Update_expt_"+_DB_mode+"_"+NumberRowsStr+"_","b")
+benchdata =drutils("Schema2_Update_expt_"+_DB_mode+"_"+NumberRowsStr+"_","n")
 
 noConstraintTimesAll = []
 if _DB_mode == "AS":
@@ -327,7 +339,7 @@ if _DB_mode == "AS":
     updateEndTime = time.time()
 
     noConstraintTimesAll = report_times(updateAll_times)
-
+    logCSVdata(updateAll_times, "Upd" , Table.GetVerifyConstraints())
     #***Remove and then Rebuild the Tables with constraints***
     Table.RemoveAllTables(client, True) #True to wait for confirmation
 
@@ -342,6 +354,7 @@ updateAll_times = UpdateData(FKreptFactor)
 updateEndTime = time.time()
 
 withConstraintTimesAll = report_times(updateAll_times)
+logCSVdata(updateAll_times, "Upd" , Table.GetVerifyConstraints())
 if _DB_mode == "AS": # Only need to call this for AS since its with/without constraints
     report_statistics(withConstraintTimesAll, noConstraintTimesAll)
 
@@ -356,7 +369,7 @@ if _DB_mode == "AS":
 #      ==============================================
 #         Delete Section
 #      ==============================================
-benchdata =drutils("Schema2_Delete_expt_"+_DB_mode+"_"+NumberRowsStr+"_","b")
+benchdata =drutils("Schema2_Delete_expt_"+_DB_mode+"_"+NumberRowsStr+"_","n")
 
 if _DB_mode == "AS":
     Table.SetVerifyConstraints(True)
@@ -370,7 +383,7 @@ deleteAll_times = DeleteData(FKreptFactor)
 deleteEndTime = time.time()
 
 withConstraintTimesAll = report_times(deleteAll_times)
-
+logCSVdata(deleteAll_times, "Del" , Table.GetVerifyConstraints())
 Table.RemoveAllTables(client, True) #True to wait for confirmation
 
 if _DB_mode == "AS":
@@ -385,7 +398,7 @@ if _DB_mode == "AS":
     deleteEndTime = time.time()
 
     noConstraintTimesAll = report_times(deleteAll_times)
-
+    logCSVdata(deleteAll_times, "Del" , Table.GetVerifyConstraints())
     report_statistics(withConstraintTimesAll, noConstraintTimesAll) # Only call this for Aerospike since that's 
                                                                     # where we have a constraint vs no constraint
 benchdata.rcrd_data("Total Delete Time: {} seconds, 2 tables".format(deleteEndTime - deleteStartTime))

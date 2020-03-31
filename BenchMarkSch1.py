@@ -170,9 +170,9 @@ def report_times(insertAll_times, silent = False):
             pp = pprint.PrettyPrinter(indent=4)
             pp.pprint(insert_times)
         BenchTimes[dataKey] = (NumberRows, Table.GetVerifyConstraints(), 
-                         statistics.median(insert_times),
-                         statistics.mean(insert_times),
-                         statistics.stdev(insert_times))
+                        statistics.median(insert_times),
+                        statistics.mean(insert_times),
+                        statistics.stdev(insert_times))
         benchdata.rcrd_data("Statistics for: "+dataKey)
         benchdata.rcrd_data("\tMEDIAN"+str(statistics.median(insert_times))+" ms")
         benchdata.rcrd_data("\tMEAN  "+str(statistics.mean(insert_times))+" ms")
@@ -188,11 +188,11 @@ def report_statistics(withConBenchTimeAll, noConBenchTimeAll):
         benchdata.rcrd_data("Statistics for: " + withConKey)
         benchdata.rcrd_data("\tWith Constraints:\t\tWithout Constraints\t\tPercent Difference, {} rows".format(noConBenchTime[0]))
         benchdata.rcrd_data("MEDIAN:\t{} \t\t{} ms\t\t{}".format(withConBenchTime[2],noConBenchTime[2],
-             (withConBenchTime[2]-noConBenchTime[2])/noConBenchTime[2]*100))
+            (withConBenchTime[2]-noConBenchTime[2])/noConBenchTime[2]*100))
         benchdata.rcrd_data("MEAN:\t{} \t\t{} ms\t\t{}".format(withConBenchTime[3],noConBenchTime[3],
-             (withConBenchTime[3]-noConBenchTime[3])/noConBenchTime[3]*100))
+            (withConBenchTime[3]-noConBenchTime[3])/noConBenchTime[3]*100))
         benchdata.rcrd_data("STDEV:\t{} \t\t{} ms\t\t{}".format(withConBenchTime[4],noConBenchTime[4],
-             (withConBenchTime[4]-noConBenchTime[4])/noConBenchTime[4]*100))
+            (withConBenchTime[4]-noConBenchTime[4])/noConBenchTime[4]*100))
         benchdata.rcrd_data()
     return
 
@@ -209,7 +209,7 @@ def logCSVdata(recordedTimes, operation, constraints):
 
     #
     for tableName in recordedTimes:
-        csv_list = [_DB_mode, _SchemaNumber, operation, tableName, NumberRows, FKreptFactor]
+        csv_list = [_DB_mode, _SchemaNumber, operation, tableName, NumberRows, FKreptFactor, constraints]
         csv_list.append(statistics.mean(recordedTimes[tableName]))
         csv_list.append(statistics.median(recordedTimes[tableName]))
         csv_list.append(statistics.stdev(recordedTimes[tableName]))
@@ -240,11 +240,12 @@ if _DB_mode == "AS":
         sys.exit(1)
 if _DB_mode == "SQL":
     client = mysql.connector.connect(
-    host="18.191.176.248",
+    host="3.16.81.134",
     user="demouser",
     passwd="DrBajaj2*",
     database="test_DB_SQL"
     )
+    database = "test_DB_SQL"
     '''-Args for local SQL database
         host="127.0.0.1",
         user="root",
@@ -283,7 +284,8 @@ else:
 #         Insert Section
 #      ==============================================
 #Initialize data reporting
-benchdata =drutils("Schema1_Insert_expt_"+_DB_mode+"_"+NumberRowsStr+"_","b")
+benchdata =drutils("Schema1_Insert_expt_"+_DB_mode+"_"+NumberRowsStr+"_","n") # if the mode is n, there wil be no logging.
+                                                                              # Change to f, s, or b if logging is needed
 
 Table.SetVerifyConstraints(True)
 Table.UseFKTables(True)
@@ -312,6 +314,7 @@ if _DB_mode == "AS":
     BuildTables(database)
     insertAll_times = InsertData(FKreptFactor)
     noConstraintTimesAll = report_times(insertAll_times)
+    logCSVdata(insertAll_times, "Ins" , Table.GetVerifyConstraints())
     report_statistics(withConstraintTimesAll, noConstraintTimesAll) # Only call this for Aerospike since that's 
                                                                     # where we have a constraint vs no constraint
 
@@ -324,7 +327,7 @@ del benchdata
 #      ==============================================
 #         Update Section
 #      ==============================================
-benchdata =drutils("Schema1_Update_expt_"+_DB_mode+"_"+NumberRowsStr+"_","b")
+benchdata =drutils("Schema1_Update_expt_"+_DB_mode+"_"+NumberRowsStr+"_","n")
 
 noConstraintTimesAll = []
 if _DB_mode == "AS":
@@ -335,7 +338,8 @@ if _DB_mode == "AS":
     updateEndTime = time.time()
 
     noConstraintTimesAll = report_times(updateAll_times)
-
+    logCSVdata(updateAll_times, "Upd" , Table.GetVerifyConstraints())
+    
     #***Remove and then Rebuild the Tables with constraints***
     Table.RemoveAllTables(client, True) #True to wait for confirmation
 
@@ -350,6 +354,7 @@ updateAll_times = UpdateData(FKreptFactor)
 updateEndTime = time.time()
 
 withConstraintTimesAll = report_times(updateAll_times)
+logCSVdata(updateAll_times, "Upd" , Table.GetVerifyConstraints())
 if _DB_mode == "AS": # Only need to call this for AS since its with/without constraints
     report_statistics(withConstraintTimesAll, noConstraintTimesAll)
 
@@ -365,7 +370,7 @@ if _DB_mode == "AS":
 #      ==============================================
 #         Delete Section
 #      ==============================================
-benchdata =drutils("Schema1_Delete_expt_"+_DB_mode+"_"+NumberRowsStr+"_","b")
+benchdata =drutils("Schema1_Delete_expt_"+_DB_mode+"_"+NumberRowsStr+"_","n")
 
 if _DB_mode == "AS":
     Table.SetVerifyConstraints(True)
@@ -379,6 +384,7 @@ deleteAll_times = DeleteData(FKreptFactor)
 deleteEndTime = time.time()
 
 withConstraintTimesAll = report_times(deleteAll_times)
+logCSVdata(deleteAll_times, "Del" , Table.GetVerifyConstraints())
 
 Table.RemoveAllTables(client, True) #True to wait for confirmation
 
@@ -394,7 +400,7 @@ if _DB_mode == "AS":
     deleteEndTime = time.time()
 
     noConstraintTimesAll = report_times(deleteAll_times)
-
+    logCSVdata(deleteAll_times, "Del" , Table.GetVerifyConstraints())
     report_statistics(withConstraintTimesAll, noConstraintTimesAll) # Only call this for Aerospike since that's 
                                                                     # where we have a constraint vs no constraint
 
@@ -403,9 +409,9 @@ benchdata.rcrd_data("Total Delete Time: {} seconds, 2 tables".format(deleteEndTi
 # Finally, remove the leftover tables, close files and DB client
 Table.RemoveAllTables(client, True) #True to wait for confirmation
 
-csvdata.close()
-del csvdata
 benchdata.close()
 del benchdata
+csvdata.close()
+del csvdata
 client.close()
 del client

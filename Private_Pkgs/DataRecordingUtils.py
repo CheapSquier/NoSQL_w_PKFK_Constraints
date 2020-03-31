@@ -7,7 +7,7 @@ class drutils:
     'Class with utils to make data recording (dr) easier'
 
     #Class variables
-    _outputModeList = ["f","s","b"] # file, screen, both
+    _outputModeList = ["f","s","b","n"] # file, screen, both, none (quick way to turn logging off without removing code)
     _dataFolderRelativePath = Path("../data/") #pathlib translates / as needed for linux(posix) or Windows
     if _dataFolderRelativePath.is_dir() == False:
         print("ERROR: " + str(_dataFolderRelativePath) + "doesn't exist, please create one!")
@@ -34,6 +34,9 @@ class drutils:
             return
         if mode in(drutils._outputModeList):
             self.mode = mode
+            if self.mode == "n": # Don't get a file handle
+                print("WARNING: Data recording mode set to 'n', no files logging will be done")
+                return
             if self.mode == "s":
                 print("Recording data to screen only")
         else:
@@ -47,16 +50,22 @@ class drutils:
                 print("Error creating DataCollection file handle.", sys.stderr)
         return
     def rcrd_data(self, string = "\n"):
+        if self.mode == "n":
+            return
         if self.mode == "s" or self.mode == "b":
             print(string)
         if self.mode == "f" or self.mode == "b":
             self.fhandle.write(string+"\n")
         return
     def close(self):
+        if self.mode == "n":
+            return
         if self.mode == "f" or self.mode == "b":
             print("Closing file: ", self.filename)
             self.fhandle.close()
     def log_csv2file(self, listParams, checkNumber = 0):
+        if self.mode == "n":
+            return
         if not(self.mode == "f" or self.mode == "b"):
             print("ERROR: Can't log_csv to a file if you didn't open a file")
             return False
