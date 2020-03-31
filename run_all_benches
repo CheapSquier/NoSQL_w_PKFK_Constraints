@@ -1,16 +1,67 @@
 #!/bin/bash
 
-    ./BenchMarkSch1.py $1 10
-    ./BenchMarkSch1.py $1 100
-    ./BenchMarkSch1.py $1 1000
-    ./BenchMarkSch1.py $1 10000
+# 10 Rows
+./BenchMarkSch1.py AS 10 1
+./BenchMarkSch1.py AS 10 5
+./BenchMarkSch1.py AS 10 10
+./BenchMarkSch1.py SQL 10 1
+./BenchMarkSch1.py SQL 10 5
+./BenchMarkSch1.py SQL 10 10
 
-    ./BenchMarkSch2.py $1 10
-    ./BenchMarkSch2.py $1 100
-    ./BenchMarkSch2.py $1 1000
-    ./BenchMarkSch2.py $1 10000
+./BenchMarkSch2.py AS 10 1
+./BenchMarkSch2.py AS 10 5
+./BenchMarkSch2.py AS 10 10
+./BenchMarkSch2.py SQL 10 1
+./BenchMarkSch2.py SQL 10 5
+./BenchMarkSch2.py SQL 10 10
 
-    ./BenchMarkSch2b.py $1 10 10
-    ./BenchMarkSch2b.py $1 100 10
-    ./BenchMarkSch2b.py $1 1000 100
-    ./BenchMarkSch2b.py $1 10000 100
+./BenchMarkSch3.py AS 10 1
+./BenchMarkSch3.py AS 10 5
+./BenchMarkSch3.py AS 10 10
+./BenchMarkSch3.py SQL 10 1
+./BenchMarkSch3.py SQL 10 5
+./BenchMarkSch3.py SQL 10 10
+
+# 100 Rows
+./BenchMarkSch1.py AS 100 1
+./BenchMarkSch1.py AS 100 5
+./BenchMarkSch1.py AS 100 10
+./BenchMarkSch1.py SQL 100 1
+./BenchMarkSch1.py SQL 100 5
+./BenchMarkSch1.py SQL 100 10
+
+./BenchMarkSch2.py AS 100 1
+./BenchMarkSch2.py AS 100 5
+./BenchMarkSch2.py AS 100 10
+./BenchMarkSch2.py SQL 100 1
+./BenchMarkSch2.py SQL 100 5
+./BenchMarkSch2.py SQL 100 10
+
+./BenchMarkSch3.py AS 100 1
+./BenchMarkSch3.py AS 100 5
+./BenchMarkSch3.py AS 100 10
+./BenchMarkSch3.py SQL 100 1
+./BenchMarkSch3.py SQL 100 5
+./BenchMarkSch3.py SQL 100 10
+
+# 1000 Rows
+./BenchMarkSch1.py AS 1000 1
+./BenchMarkSch1.py AS 1000 5
+./BenchMarkSch1.py AS 1000 10
+./BenchMarkSch1.py SQL 1000 1
+./BenchMarkSch1.py SQL 1000 5
+./BenchMarkSch1.py SQL 1000 10
+
+./BenchMarkSch2.py AS 1000 1
+./BenchMarkSch2.py AS 1000 5
+./BenchMarkSch2.py AS 1000 10
+./BenchMarkSch2.py SQL 1000 1
+./BenchMarkSch2.py SQL 1000 5
+./BenchMarkSch2.py SQL 1000 10
+
+./BenchMarkSch3.py AS 1000 1
+./BenchMarkSch3.py AS 1000 5
+./BenchMarkSch3.py AS 1000 10
+./BenchMarkSch3.py SQL 1000 1
+./BenchMarkSch3.py SQL 1000 5
+./BenchMarkSch3.py SQL 1000 10
