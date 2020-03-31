@@ -130,24 +130,26 @@ def DeleteData(NumberHashesPerFK):
     TableC = Table._registry[2]
     #Setup a random, no repeating sequence
     random.seed(42)
-    row_seq = list(range(0, NumberRows))
-    random.shuffle(row_seq)
+    row_seqTableAB = list(range(int(NumberRows/FKreptFactor), NumberRows)) # Lower values will be referenced by Table B FK, so can't delete
+    row_seqTableC = list(range(0, NumberRows))
+    random.shuffle(row_seqTableAB)
+    random.shuffle(row_seqTableC)
     
     for idx in range(0, int(NumberRows/2)):
-        FKindex = math.floor(row_seq[idx]/NumberHashesPerFK)
+        FKindex = math.floor(row_seqTableC[idx]/NumberHashesPerFK)
         t0 = time.time()
         #old TableC.Delete([row_seq[idx], row_seq[idx], FKindex])
-        TableC.Delete([FKindex, FKindex, row_seq[idx]])
+        TableC.Delete([FKindex, FKindex, row_seqTableC[idx]])
         t1 = time.time()
         TableC_times.append((t1 - t0) * 1000) # Times are in S so *1000 makes units mS
         
         t0 = time.time()
-        TableA.Delete([row_seq[idx]])
+        TableA.Delete([row_seqTableAB[idx]])
         t1 = time.time()
         TableA_times.append((t1 - t0) * 1000) # Times are in S so *1000 makes units mS
         
         t0 = time.time()
-        TableB.Delete([row_seq[idx]])
+        TableB.Delete([row_seqTableAB[idx]])
         t1 = time.time()
         TableB_times.append((t1 - t0) * 1000) # Times are in S so *1000 makes units mS
         
@@ -264,7 +266,7 @@ if _DB_mode != "SQL" and _DB_mode != "AS":
 # ==============================================
 csvdata = drutils("NoSQLvsSQL_bench_data","f", "csv")
 
-if len(sys.argv) == 1: # Only specified the DB type, so input params
+if len(sys.argv) == 1+1: # Only specified the DB type, so input params
     NumberRows = input("How many records to BenchMark?")
     FKreptFactor = int(input("What FK repetition factor to use?"))
 else:

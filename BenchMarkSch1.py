@@ -63,8 +63,6 @@ def InsertData(NumberHashesPerFK):
     insertAll_times = {}
     TableA = Table._registry[0]
     TableB = Table._registry[1]
-    print(TableA.TableName)
-    print(TableB.TableName)
     # Insert rows for Table A
     for rowNum in range(0,int(NumberRows)):
         thisRow =[]
@@ -134,23 +132,23 @@ def DeleteData(NumberHashesPerFK):
     All_times = {}
     TableA = Table._registry[0]
     TableB = Table._registry[1]
-    print(TableA.TableName)
-    print(TableB.TableName)
     #Setup a random, no repeating sequence
     random.seed(42)
-    row_seq = list(range(0, NumberRows))
-    random.shuffle(row_seq)
+    row_seqTableA = list(range(int(NumberRows/FKreptFactor), NumberRows)) # Lower values will be referenced by Table B FK, so can't delete
+    row_seqTableB = list(range(0, NumberRows))
+    random.shuffle(row_seqTableA)
+    random.shuffle(row_seqTableB)
 
     for idx in range(0, int(NumberRows/2)):
         A_Row = []
         B_Row = []
-        A_Row.append(row_seq[idx]) #The PK
-        B_Row.append(row_seq[idx]) #The PK for Table B
+        A_Row.append(row_seqTableA[idx]) #The PK
+        B_Row.append(row_seqTableB[idx]) #The PK for Table B
         t0 = time.time()
         TableB.Delete(B_Row)
         t1 = time.time()
         B_times.append((t1 - t0) * 1000) # Times are in S so *1000 makes units mS
-        
+
         t0 = time.time()
         TableA.Delete(A_Row)
         t1 = time.time()

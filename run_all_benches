@@ -44,6 +44,8 @@
 ./BenchMarkSch3.py SQL 100 5
 ./BenchMarkSch3.py SQL 100 10
 
+exit
+
 # 1000 Rows
 ./BenchMarkSch1.py AS 1000 1
 ./BenchMarkSch1.py AS 1000 5

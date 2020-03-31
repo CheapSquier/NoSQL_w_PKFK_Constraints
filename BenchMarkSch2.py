@@ -135,19 +135,19 @@ def DeleteData(NumberHashesPerFK):
     All_times = {}
     TableA = Table._registry[0]
     TableB = Table._registry[1]
-    print(TableA.TableName)
-    print(TableB.TableName)
     #Setup a random, no repeating sequence
     random.seed(42)
-    row_seq = list(range(0, NumberRows))
-    random.shuffle(row_seq)
+    row_seqTableA = list(range(int(NumberRows/FKreptFactor), NumberRows)) # Lower values will be referenced by Table B FK, so can't delete
+    row_seqTableB = list(range(0, NumberRows))
+    random.shuffle(row_seqTableA)
+    random.shuffle(row_seqTableB)
 
     for idx in range(0, int(NumberRows/2)):
-        FKindex = math.floor(row_seq[idx]/NumberHashesPerFK)
+        FKindex = math.floor(row_seqTableB[idx]/NumberHashesPerFK)
         A_Row = []
         B_Row = []
-        A_Row.append(row_seq[idx]) #The PK
-        B_Row.append(row_seq[idx]) #The PK for Table B
+        A_Row.append(row_seqTableA[idx]) #The PK
+        B_Row.append(row_seqTableB[idx]) #The PK for Table B
         B_Row.append(FKindex) #The 2nd PKcol for Table B (also an FK) # *** Difference in execution for Schema1 and Schema2
         t0 = time.time()
         TableB.Delete(B_Row)
@@ -269,7 +269,7 @@ if _DB_mode == "SQL":
 # ==============================================
 csvdata = drutils("NoSQLvsSQL_bench_data","f", "csv")
 
-if len(sys.argv) == 1: # Only specified the DB type, so input params
+if len(sys.argv) == 1+1: # Only specified the DB type, so input params
     NumberRows = input("How many records to BenchMark?")
     FKreptFactor = int(input("What FK repetition factor to use?"))
 else:
