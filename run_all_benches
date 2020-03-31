@@ -1,27 +1,5 @@
 #!/bin/bash
 
-# 10 Rows
-./BenchMarkSch1.py AS 10 1
-./BenchMarkSch1.py AS 10 5
-./BenchMarkSch1.py AS 10 10
-./BenchMarkSch1.py SQL 10 1
-./BenchMarkSch1.py SQL 10 5
-./BenchMarkSch1.py SQL 10 10
-
-./BenchMarkSch2.py AS 10 1
-./BenchMarkSch2.py AS 10 5
-./BenchMarkSch2.py AS 10 10
-./BenchMarkSch2.py SQL 10 1
-./BenchMarkSch2.py SQL 10 5
-./BenchMarkSch2.py SQL 10 10
-
-./BenchMarkSch3.py AS 10 1
-./BenchMarkSch3.py AS 10 5
-./BenchMarkSch3.py AS 10 10
-./BenchMarkSch3.py SQL 10 1
-./BenchMarkSch3.py SQL 10 5
-./BenchMarkSch3.py SQL 10 10
-
 # 100 Rows
 ./BenchMarkSch1.py AS 100 1
 ./BenchMarkSch1.py AS 100 5
@@ -44,8 +22,6 @@
 ./BenchMarkSch3.py SQL 100 5
 ./BenchMarkSch3.py SQL 100 10
 
-exit
-
 # 1000 Rows
 ./BenchMarkSch1.py AS 1000 1
 ./BenchMarkSch1.py AS 1000 5
@@ -67,3 +43,25 @@ exit
 ./BenchMarkSch3.py SQL 1000 1
 ./BenchMarkSch3.py SQL 1000 5
 ./BenchMarkSch3.py SQL 1000 10
+
+# 10000 Rows
+./BenchMarkSch1.py AS 10000 1
+./BenchMarkSch1.py AS 10000 5
+./BenchMarkSch1.py AS 10000 10
+./BenchMarkSch1.py SQL 10000 1
+./BenchMarkSch1.py SQL 10000 5
+./BenchMarkSch1.py SQL 10000 10
+
+./BenchMarkSch2.py AS 10000 1
+./BenchMarkSch2.py AS 10000 5
+./BenchMarkSch2.py AS 10000 10
+./BenchMarkSch2.py SQL 10000 1
+./BenchMarkSch2.py SQL 10000 5
+./BenchMarkSch2.py SQL 10000 10
+
+./BenchMarkSch3.py AS 10000 1
+./BenchMarkSch3.py AS 10000 5
+./BenchMarkSch3.py AS 10000 10
+./BenchMarkSch3.py SQL 10000 1
+./BenchMarkSch3.py SQL 10000 5
+./BenchMarkSch3.py SQL 10000 10

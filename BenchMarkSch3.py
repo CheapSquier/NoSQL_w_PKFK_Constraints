@@ -129,12 +129,16 @@ def DeleteData(NumberHashesPerFK):
     TableB = Table._registry[1]
     TableC = Table._registry[2]
     #Setup a random, no repeating sequence
-    random.seed(42)
-    row_seqTableAB = list(range(int(NumberRows/FKreptFactor), NumberRows)) # Lower values will be referenced by Table B FK, so can't delete
-    row_seqTableC = list(range(0, NumberRows))
-    random.shuffle(row_seqTableAB)
-    random.shuffle(row_seqTableC)
-    
+    if FKreptFactor == 1:
+        row_seqTableAB = list(range(0, NumberRows))
+        row_seqTableC = row_seqTableAB
+        random.shuffle(row_seqTableAB) #remember, the two row_seq variables are pointers to the same object
+    else:
+        row_seqTableAB = list(range(int(NumberRows/FKreptFactor), NumberRows)) # Lower values will be referenced by Table B FK, so can't delete
+        row_seqTableC = list(range(0, NumberRows))
+        random.shuffle(row_seqTableAB)
+        random.shuffle(row_seqTableC)
+
     for idx in range(0, int(NumberRows/2)):
         FKindex = math.floor(row_seqTableC[idx]/NumberHashesPerFK)
         t0 = time.time()
@@ -279,6 +283,7 @@ if NumberRows >= 1000:
 else:
     NumberRowsStr = str(NumberRows)
 
+print("Number of Rows: {}, FK Rep Factor: {}".format(NumberRows, FKreptFactor))
 #      ==============================================
 #         Insert Section
 #      ==============================================
