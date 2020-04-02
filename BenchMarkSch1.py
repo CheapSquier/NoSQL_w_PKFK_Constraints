@@ -163,42 +163,6 @@ def DeleteData(NumberHashesPerFK):
     All_times["Table1B"] = B_times
     return(All_times)
 
-def report_times(insertAll_times, silent = False):
-    BenchTimes = {}
-    benchdata.rcrd_data(str("Statistics for Insert with {} rows, Verify Constraints set to: {}").format(NumberRows,Table.GetVerifyConstraints()))
-    for dataKey in insertAll_times:
-        insert_times = insertAll_times[dataKey]
-        if _print_raw:
-            print("Raw insert times for:", dataKey)
-            pp = pprint.PrettyPrinter(indent=4)
-            pp.pprint(insert_times)
-        BenchTimes[dataKey] = (NumberRows, Table.GetVerifyConstraints(), 
-                        statistics.median(insert_times),
-                        statistics.mean(insert_times),
-                        statistics.stdev(insert_times))
-        benchdata.rcrd_data("Statistics for: "+dataKey)
-        benchdata.rcrd_data("\tMEDIAN"+str(statistics.median(insert_times))+" ms")
-        benchdata.rcrd_data("\tMEAN  "+str(statistics.mean(insert_times))+" ms")
-        benchdata.rcrd_data("\tSTDEV "+str(statistics.stdev(insert_times))+" ms")
-    return BenchTimes
-
-def report_statistics(withConBenchTimeAll, noConBenchTimeAll):
-    # noCon = No constraints used
-    for withConKey, noConKey in zip(withConBenchTimeAll, noConBenchTimeAll): # This function doesn't handle noCon times that are empty (ie SQL)
-        print("Statistics for: ", withConKey)                                # (So don't call it with SQL benchmarks)
-        withConBenchTime = withConBenchTimeAll[withConKey]
-        noConBenchTime = noConBenchTimeAll[noConKey]
-        benchdata.rcrd_data("Statistics for: " + withConKey)
-        benchdata.rcrd_data("\tWith Constraints:\t\tWithout Constraints\t\tPercent Difference, {} rows".format(noConBenchTime[0]))
-        benchdata.rcrd_data("MEDIAN:\t{} \t\t{} ms\t\t{}".format(withConBenchTime[2],noConBenchTime[2],
-            (withConBenchTime[2]-noConBenchTime[2])/noConBenchTime[2]*100))
-        benchdata.rcrd_data("MEAN:\t{} \t\t{} ms\t\t{}".format(withConBenchTime[3],noConBenchTime[3],
-            (withConBenchTime[3]-noConBenchTime[3])/noConBenchTime[3]*100))
-        benchdata.rcrd_data("STDEV:\t{} \t\t{} ms\t\t{}".format(withConBenchTime[4],noConBenchTime[4],
-            (withConBenchTime[4]-noConBenchTime[4])/noConBenchTime[4]*100))
-        benchdata.rcrd_data()
-    return
-
 def logCSVdata(recordedTimes, operation, constraints):
     global NumberRows
     global FKreptFactor
@@ -287,9 +251,6 @@ print("Number of Rows: {}, FK Rep Factor: {}".format(NumberRows, FKreptFactor))
 #      ==============================================
 #         Insert Section
 #      ==============================================
-#Initialize data reporting
-benchdata =drutils("Schema1_Insert_expt_"+_DB_mode+"_"+NumberRowsStr+"_","n") # if the mode is n, there wil be no logging.
-                                                                              # Change to f, s, or b if logging is needed
 
 Table.SetVerifyConstraints(True)
 Table.UseFKTables(True)
@@ -303,7 +264,7 @@ insertAll_times = InsertData(FKreptFactor)
 insertEndTime = time.time()
 
 # ### Calculate Time Statistics (Checking constraints during Insert)
-withConstraintTimesAll = report_times(insertAll_times)
+#withConstraintTimesAll = report_times(insertAll_times)
 logCSVdata(insertAll_times, "Ins" , Table.GetVerifyConstraints())
 noConstraintTimesAll = []
 if _DB_mode == "AS":
@@ -317,21 +278,12 @@ if _DB_mode == "AS":
 
     BuildTables(database)
     insertAll_times = InsertData(FKreptFactor)
-    noConstraintTimesAll = report_times(insertAll_times)
+
     logCSVdata(insertAll_times, "Ins" , Table.GetVerifyConstraints())
-    report_statistics(withConstraintTimesAll, noConstraintTimesAll) # Only call this for Aerospike since that's 
-                                                                    # where we have a constraint vs no constraint
-
-# ### Calculate Time Statistics (No constraint verification during Insert)    Close the data object
-benchdata.rcrd_data("Total Insert Time: {} seconds, 2 tables".format(insertEndTime - insertStartTime))
-benchdata.close()
-del benchdata
-
 
 #      ==============================================
 #         Update Section
 #      ==============================================
-benchdata =drutils("Schema1_Update_expt_"+_DB_mode+"_"+NumberRowsStr+"_","n")
 
 noConstraintTimesAll = []
 if _DB_mode == "AS":
@@ -341,7 +293,7 @@ if _DB_mode == "AS":
     updateAll_times = UpdateData(FKreptFactor)
     updateEndTime = time.time()
 
-    noConstraintTimesAll = report_times(updateAll_times)
+    #noConstraintTimesAll = report_times(updateAll_times)
     logCSVdata(updateAll_times, "Upd" , Table.GetVerifyConstraints())
     
     #***Remove and then Rebuild the Tables with constraints***
@@ -357,15 +309,7 @@ updateStartTime = time.time() #updateStartTime/EndTime only use to give an overa
 updateAll_times = UpdateData(FKreptFactor)
 updateEndTime = time.time()
 
-withConstraintTimesAll = report_times(updateAll_times)
 logCSVdata(updateAll_times, "Upd" , Table.GetVerifyConstraints())
-if _DB_mode == "AS": # Only need to call this for AS since its with/without constraints
-    report_statistics(withConstraintTimesAll, noConstraintTimesAll)
-
-benchdata.rcrd_data("Total Update Time: {} seconds, 2 tables".format(updateEndTime - updateStartTime))
-report_statistics(withConstraintTimesAll, noConstraintTimesAll)
-benchdata.close()
-del benchdata
 
 if _DB_mode == "AS":
     #Remove all tables and rebuild them for the delete.
@@ -374,7 +318,6 @@ if _DB_mode == "AS":
 #      ==============================================
 #         Delete Section
 #      ==============================================
-benchdata =drutils("Schema1_Delete_expt_"+_DB_mode+"_"+NumberRowsStr+"_","n")
 
 if _DB_mode == "AS":
     Table.SetVerifyConstraints(True)
@@ -387,7 +330,6 @@ deleteStartTime = time.time() #deleteStartTime/EndTime only use to give an overa
 deleteAll_times = DeleteData(FKreptFactor)
 deleteEndTime = time.time()
 
-withConstraintTimesAll = report_times(deleteAll_times)
 logCSVdata(deleteAll_times, "Del" , Table.GetVerifyConstraints())
 
 Table.RemoveAllTables(client, True) #True to wait for confirmation
@@ -403,18 +345,11 @@ if _DB_mode == "AS":
     deleteAll_times = DeleteData(FKreptFactor)
     deleteEndTime = time.time()
 
-    noConstraintTimesAll = report_times(deleteAll_times)
     logCSVdata(deleteAll_times, "Del" , Table.GetVerifyConstraints())
-    report_statistics(withConstraintTimesAll, noConstraintTimesAll) # Only call this for Aerospike since that's 
-                                                                    # where we have a constraint vs no constraint
-
-benchdata.rcrd_data("Total Delete Time: {} seconds, 2 tables".format(deleteEndTime - deleteStartTime))
 
 # Finally, remove the leftover tables, close files and DB client
 Table.RemoveAllTables(client, True) #True to wait for confirmation
 
-benchdata.close()
-del benchdata
 csvdata.close()
 del csvdata
 client.close()
